@@ -462,4 +462,41 @@ table.list tr.dimmed td { color: var(--faint); }
 .radio-card:has(input:checked) { border-color: var(--indigo); background: var(--indigo-soft); box-shadow: 0 0 0 1px var(--indigo); }
 .radio-card:has(input:focus-visible) { outline: 2px solid var(--indigo); outline-offset: 2px; }
 .section-title { font-size: 15px; font-weight: 800; margin-bottom: 10px; }
+/* ---------- 테이블 시간표 (v2에서 옮김) ---------- */
+.tt { --tt-label: 92px; position: relative; min-width: 760px; font-size: 12px; }
+.tt-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.tt-head, .tt-row { display: grid; grid-template-columns: var(--tt-label) minmax(0, 1fr); }
+.tt-head { position: sticky; top: 0; z-index: 2; background: var(--surface-2); border-bottom: 1px solid var(--line); height: 28px; }
+.tt-name-h { display: flex; align-items: center; padding: 0 10px; color: var(--faint); font-weight: 600; }
+.tt-scale { position: relative; }
+.tt-tick { position: absolute; top: 0; bottom: 0; border-left: 1px solid var(--line); padding-left: 4px; display: flex; align-items: center; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tt-tick.half { border-left-style: dashed; }
+.tt-row { border-bottom: 1px solid var(--line); min-height: 34px; }
+.tt-row:last-child { border-bottom: 0; }
+.tt-row.group-start { border-top: 2px solid var(--line); }
+.tt-row.focused { background: var(--mint); }
+.tt-row.has-soon .tt-name b { color: var(--amber-ink); }
+.tt-name { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 0; padding: 2px 10px; border: 0; background: transparent; text-align: left; cursor: pointer; color: var(--ink); border-right: 1px solid var(--line); }
+.tt-name span { font-size: 10.5px; color: var(--faint); }
+.tt-track { position: relative; }
+.tt-break { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(-45deg, var(--surface-2) 0 5px, transparent 5px 10px); }
+.tt-block { position: absolute; top: 5px; bottom: 5px; border-radius: 6px; border: 1px solid transparent; font: inherit; font-size: 11px; font-weight: 700; padding: 0 6px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-align: left; cursor: pointer; }
+.tt-block.k-reserved { background: var(--mint); color: var(--teal-deep); border-color: var(--teal); }
+.tt-block.k-seated { background: var(--blue-soft); color: var(--blue); border-color: var(--blue); }
+.tt-block.k-done { background: var(--surface-2); color: var(--faint); }
+.tt-block.k-walkin { background: var(--indigo-soft); color: var(--indigo); border-color: var(--indigo); }
+.tt-block.k-phone { background: var(--indigo-soft); color: var(--indigo); border-style: dashed; border-color: var(--indigo); }
+.tt-block.soon { background: var(--amber-soft); color: var(--amber-ink); border-color: var(--amber); }
+.tt-block.urgent { box-shadow: 0 0 0 2px var(--amber); }
+.tt-block:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+.tt-preview { position: absolute; top: 5px; bottom: 5px; border-radius: 6px; border: 2px dashed var(--teal-deep); color: var(--teal-deep); font-size: 11px; font-weight: 800; padding: 0 6px; display: flex; align-items: center; white-space: nowrap; overflow: hidden; background: color-mix(in srgb, var(--mint) 60%, transparent); }
+.tt-now { position: absolute; top: 0; bottom: 0; left: calc(var(--tt-label) + (100% - var(--tt-label)) * var(--tt-now) / 100); border-left: 2px solid var(--coral); pointer-events: none; z-index: 3; }
+.tt-now span { position: absolute; top: 4px; left: -22px; background: var(--coral); color: #fff; font-size: 10.5px; font-weight: 800; border-radius: 99px; padding: 1px 6px; font-variant-numeric: tabular-nums; }
+.tt-legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--muted); margin-top: 10px; }
+.tt-legend i { display: inline-block; width: 14px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; border: 1px solid transparent; }
+.tt-legend .l-res { background: var(--mint); border-color: var(--teal); } .tt-legend .l-seat { background: var(--blue-soft); border-color: var(--blue); }
+.tt-legend .l-walk { background: var(--indigo-soft); border-color: var(--indigo); } .tt-legend .l-soon { background: var(--amber-soft); border-color: var(--amber); }
+.tt-legend .l-brk { background: repeating-linear-gradient(-45deg, var(--line) 0 3px, transparent 3px 6px); border-color: var(--line); }
+.soon-status { font-size: 12.5px; font-weight: 700; padding: 5px 10px; border-radius: 99px; background: var(--surface-2); color: var(--muted); }
+.soon-status.on { background: var(--amber-soft); color: var(--amber-ink); }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
