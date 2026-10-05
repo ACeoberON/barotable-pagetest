@@ -3,7 +3,7 @@
   const side = document.getElementById('owner-side');
   if (!side) return;
   const cur = document.body.dataset.screen;
-  const items = [['owner-dashboard', '대시보드'], ['owner-editor', '좌석도 관리'], ['owner-settings', '운영 조건']];
+  const items = [['owner-dashboard', '대시보드'], ['owner-guests', '손님 배정'], ['owner-editor', '좌석도 관리'], ['owner-settings', '운영 조건']];
   side.innerHTML = `
     <a class="brand" href="${BT.url('index')}">바로테이블</a>
     <div class="store">${BT.esc(BT.store().name)} · 점주</div>

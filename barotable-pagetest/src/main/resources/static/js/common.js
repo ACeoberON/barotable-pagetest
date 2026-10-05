@@ -27,7 +27,8 @@ window.BT = (function () {
     'index': ['index.html', '/'], 'reserve': ['reserve.html', '/reserve'], 'confirm': ['confirm.html', '/reserve/confirm'],
     'complete': ['complete.html', '/reserve/complete'], 'lookup': ['lookup.html', '/reservations/lookup'],
     'owner-login': ['owner/login.html', '/owner/login'], 'owner-dashboard': ['owner/dashboard.html', '/owner/dashboard'],
-    'owner-editor': ['owner/editor.html', '/owner/seat-map'], 'owner-settings': ['owner/settings.html', '/owner/settings']
+    'owner-editor': ['owner/editor.html', '/owner/seat-map'], 'owner-settings': ['owner/settings.html', '/owner/settings'],
+    'owner-guests': ['owner/guests.html', '/owner/guests']
   };
   function url(name) {
     const r = ROUTES[name];
@@ -58,6 +59,8 @@ window.BT = (function () {
   }
   function updateReservation(no, change) { const log = resLog(); log.patch[no] = Object.assign(log.patch[no] || {}, change); sset('bt.res', log); }
   function addReservation(r) { const log = resLog(); log.added.push(r); sset('bt.res', log); }
+  /* 점주가 직접 만든 배정(워크인 · 전화 예약)만 지울 수 있다 */
+  function removeReservation(no) { const log = resLog(); log.added = log.added.filter(r => r.no !== no); delete log.patch[no]; sset('bt.res', log); }
   function resetReservations() { try { sessionStorage.removeItem('bt.res'); } catch (e) {} }
   const isActive = r => r.status !== 'noshow' && r.status !== 'cancelled';
 
@@ -125,7 +128,7 @@ window.BT = (function () {
   const SCREENS = [
     ['index', 'C-01', '매장 입장'], ['reserve', 'C-03', '좌석도 선택 · AI 채팅'], ['confirm', 'C-04/05', '정보·확인'],
     ['complete', 'C-06', '예약 완료'], ['lookup', 'C-07', '비회원 조회'], ['owner-login', 'A-01', '점주·관리자 로그인'],
-    ['owner-dashboard', 'O-02', '점주 대시보드'], ['owner-editor', 'O-03', '좌석도 편집'], ['owner-settings', 'O-04', '운영 조건']
+    ['owner-dashboard', 'O-02', '점주 대시보드'], ['owner-guests', 'O-05', '손님 배정'], ['owner-editor', 'O-03', '좌석도 편집'], ['owner-settings', 'O-04', '운영 조건']
   ];
   document.addEventListener('DOMContentLoaded', () => {
     const cur = document.body.dataset.screen;
@@ -141,5 +144,5 @@ window.BT = (function () {
   });
 
   return { YEAR, MONTH, TODAY, NOW, store, floors, allTables, findTable, zoneOf, url, go, draft, saveDraft,
-    guestNo, reservations, updateReservation, addReservation, resetReservations, isActive, seatRule, tableClash, sget, sset, pad, toMin, toHHMM, parseDate, iso, fmtDate, octoberDays, slots, timeCheck, esc, toast };
+    guestNo, reservations, updateReservation, addReservation, removeReservation, resetReservations, isActive, seatRule, tableClash, sget, sset, pad, toMin, toHHMM, parseDate, iso, fmtDate, octoberDays, slots, timeCheck, esc, toast };
 })();
