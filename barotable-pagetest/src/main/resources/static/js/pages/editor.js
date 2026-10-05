@@ -293,7 +293,10 @@
     bindCommon(x, 'fixture');
   }
 
-  /* ---------- 저장 ---------- */
+  /* ---------- 저장 ----------
+   * BT.floors()가 'bt.floors'를 읽으므로 저장하면 손님 좌석도와 대시보드에 그대로 반영된다 */
+  const saveFloors = fl => { try { sessionStorage.setItem('bt.floors', JSON.stringify(fl)); } catch (e) {} };
+  const resetFloors = () => { try { sessionStorage.removeItem('bt.floors'); } catch (e) {} };
   function validate() {
     const out = [], ids = {};
     FL.forEach(f => f.tables.forEach(t => { (ids[t.id] = ids[t.id] || []).push(f.name); }));
@@ -318,14 +321,14 @@
   }
   $('#layout-save').addEventListener('click', () => {
     const res = validate(), box = $('#save-result'), errs = res.filter(r => r[0] === 'e');
-    if (!errs.length) { BT.saveFloors(FL); S.dirty = false; renderSave(); }
+    if (!errs.length) { saveFloors(FL); S.dirty = false; renderSave(); }
     const done = errs.length ? [] : [['o', '저장했어요. 손님 좌석도와 대시보드에 바로 반영됩니다.']];
     box.hidden = false;
     box.innerHTML = res.concat(done).map(([k, m]) => `<li class="${k}">${BT.esc(m)}</li>`).join('');
   });
   $('#layout-reset').addEventListener('click', () => {
     if (!resetArm) { resetArm = true; renderSave(); setTimeout(() => { resetArm = false; renderSave(); }, 3000); return; }
-    resetArm = false; BT.resetFloors(); FL = BT.floors(); S.floor = FL[0].id; S.sel = null; S.dirty = false;
+    resetArm = false; resetFloors(); FL = BT.floors(); S.floor = FL[0].id; S.sel = null; S.dirty = false;
     $('#save-result').hidden = true; render(); BT.toast('처음 배치로 되돌렸어요');
   });
   window.addEventListener('beforeunload', e => { if (S.dirty) { e.preventDefault(); e.returnValue = ''; } });
