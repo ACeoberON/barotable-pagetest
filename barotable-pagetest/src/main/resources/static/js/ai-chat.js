@@ -13,7 +13,7 @@
   const slot = { date: null, time: null, party: null, requests: [], prefs: [] };
   let misses = 0, greeted = false;
 
-  const SUGGEST = ['이번 토요일 저녁 7시쯤 4명이고 아이 의자가 필요해요', '내일 점심 12시 반 둘이요, 창가 자리', '10월 17일 6명 2층 룸', '오늘 3시에 2명'];
+  const SUGGEST = ['이번 토요일 저녁 7시쯤 4명이고 아이 의자가 필요해요', '내일 점심 12시 반 둘이요, 창가 자리', '10월 17일 6명 2층 룸', '오늘 3시에 2명', '금요일 퇴근하고 커플로 갈게요'];
 
   /* ---------- 열기 / 닫기 ---------- */
   function open() {
@@ -45,7 +45,12 @@
     setTimeout(() => { typing.remove(); handle(text); }, 450);
   }
 
-  /* ---------- 규칙 기반 추출 (LLM 대체 목업) ---------- */
+  /* ---------- 하이브리드 해석 ----------
+   * 1단계 규칙 파서(mockExtract): 모든 문장을 먼저 정규식으로 읽는다.
+   * 2단계 로컬 LLM(mockLocalLLM): 1단계 뒤에도 날짜·시간·인원 중 빈 칸이 남을 때만 부른다.
+   * 테이블 선정은 어느 단계에서도 하지 않는다. */
+
+  /* ---------- 1단계: 규칙 파서 ---------- */
   const NUM = { '한': 1, '혼자': 1, '두': 2, '둘': 2, '세': 3, '셋': 3, '네': 4, '넷': 4, '다섯': 5, '여섯': 6, '일곱': 7, '여덟': 8, '아홉': 9, '열': 10, '열한': 11, '열두': 12 };
   const DOW = { '월': 0, '화': 1, '수': 2, '목': 3, '금': 4, '토': 5, '일': 6 };
   const REQ = [
@@ -133,9 +138,31 @@
   }
   function prevSlot(t) { return BT.toHHMM(BT.toMin(t) - (st.slotMinutes || 30)); }
 
+  /* ---------- 2단계: 로컬 LLM (프로토타입: 고정 응답) ----------
+   * 실제 구현: 서버가 Ollama 소형 모델에 문장과 빈 항목을 넘기고 { date, time, party } JSON만 받는다.
+   * 받은 값은 규칙 파서 결과와 똑같이 코드로 다시 검사한다(10월 여부, 영업시간, 인원 범위).
+   * 여기서는 서버가 없으므로 아래 표에 있는 문장만 정해진 값을 돌려주고, 나머지는 빈 응답으로 둔다. */
+  const LLM_FIXED = {
+    '금요일 퇴근하고 커플로 갈게요': { party: 2 }
+  };
+  function mockLocalLLM(raw, keys) {
+    const res = LLM_FIXED[raw.trim()] || {};
+    const out = {};
+    keys.forEach(k => { if (res[k] != null) out[k] = res[k]; });
+    if (out.date && (out.date < BT.TODAY || +out.date.slice(5, 7) !== BT.MONTH)) delete out.date;
+    if (out.time && !BT.timeCheck(out.time, st).ok) delete out.time;
+    if (out.party != null && (out.party < st.minParty || out.party > st.maxParty)) delete out.party;
+    return out;
+  }
+
   /* ---------- 대화 처리 ---------- */
+  let via = 'rule';
   function handle(text) {
     const r = mockExtract(text);
+    // 규칙 파서가 읽었지만 값이 잘못된 항목은 LLM에 다시 묻지 않는다
+    const gaps = ['date', 'time', 'party'].filter(k => slot[k] == null && r[k] == null && !r.problems.some(p => p.k === k));
+    via = gaps.length ? 'llm' : 'rule';
+    if (gaps.length) Object.assign(r, mockLocalLLM(text, gaps));
     if (r.phone) bot('연락처나 이메일은 채팅에 저장하지 않아요. 다음 단계 입력칸에서 따로 받을게요.', 'warn');
     let got = false;
     ['date', 'time', 'party'].forEach(k => { if (r[k] != null) { slot[k] = r[k]; got = true; } });
@@ -146,7 +173,7 @@
     if (!got && !r.phone) {
       misses++;
       if (misses >= 2) { fallback(); return; }
-      bot('죄송해요, 예약 정보를 찾지 못했어요.\n"10월 10일 저녁 7시 4명"처럼 날짜·시간·인원을 알려 주세요.');
+      bot((via === 'llm' ? '규칙 파서와 로컬 LLM 모두 예약 정보를 찾지 못했어요.' : '죄송해요, 예약 정보를 찾지 못했어요.') + '\n"10월 10일 저녁 7시 4명"처럼 날짜·시간·인원을 알려 주세요.');
       return;
     }
     misses = 0;
@@ -168,6 +195,7 @@
     const cell = (label, val) => `<div class="extract-cell ${val == null ? 'missing' : ''}"><span>${label}</span><b>${val == null ? '확인 필요' : BT.esc(val)}</b></div>`;
     el.innerHTML = `
       <div class="row" style="justify-content:space-between"><b style="font-size:13.5px">${done ? '예약 정보를 정리했어요' : '지금까지 정리한 내용'}</b><span class="badge badge-indigo">정해진 항목만 추출</span></div>
+      <div class="row"><span class="badge ${via === 'llm' ? 'badge-amber' : 'badge-teal'}" title="${via === 'llm' ? '규칙으로 읽지 못한 항목을 로컬 LLM에 맡겼어요' : '규칙 파서만으로 읽었어요'}">${via === 'llm' ? '로컬 LLM이 해석' : '규칙 파서로 해석'}</span></div>
       <div class="extract-grid">
         ${cell('날짜', slot.date ? BT.fmtDate(slot.date) : null)}
         ${cell('시간', slot.time)}
@@ -197,5 +225,5 @@
     el.querySelector('button').addEventListener('click', () => { close(); document.querySelector('#date-strip').scrollIntoView({ behavior: 'smooth', block: 'center' }); });
   }
 
-  window.BTChat = { mockExtract, open };
+  window.BTChat = { mockExtract, mockLocalLLM, open };
 })();
