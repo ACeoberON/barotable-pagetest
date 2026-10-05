@@ -1,6 +1,6 @@
 /* =========================================================
  * 바로테이블 화면 설계 확인용 - 공통
- * 구현 기능: 화면 이동, 10월 날짜 / 영업시간 슬롯 생성, (AI 채팅용) 시간 확인
+ * 구현 기능: 화면 이동, 10월 날짜 / 영업시간 슬롯 생성, (AI 채팅용) 시간 확인, 예약 상태 변경 · 좌석 규칙
  * 나머지 데이터는 모두 하드코딩
  * ========================================================= */
 window.BT = (function () {
@@ -41,6 +41,40 @@ window.BT = (function () {
   const DEFAULT_DRAFT = { date: '2026-10-10', time: '19:00', party: 4, table: 'T03', request: '아이 의자' };
   const draft = () => Object.assign({}, DEFAULT_DRAFT, sget('bt.draft', {}));
   const saveDraft = p => { const d = Object.assign(draft(), p); sset('bt.draft', d); return d; };
+
+  /* ---------- 예약 상태 ----------
+   * 원본은 BT_DATA.OWNER_RESERVATIONS + 손님 화면에서 만든 예약(draft) 하나.
+   * 취소·노쇼·방문·테이블 이동·워크인처럼 바뀐 부분만 sessionStorage('bt.res')에 쌓는다.
+   * 실제 구현: GET/PATCH /api/owner/reservations, POST /api/reservations/lookup */
+  const NOW = D.OWNER_NOW;
+  const guestNo = d => 'BT-' + d.date.replace(/-/g, '') + '-0031';
+  const resLog = () => sget('bt.res', { patch: {}, added: [] });
+  function reservations() {
+    const log = resLog(), d = draft();
+    const base = D.OWNER_RESERVATIONS.map(r => Object.assign({ date: D.OWNER_TODAY }, r));
+    const mine = { no: guestNo(d), date: d.date, time: d.time, name: '홍길동', phone: '010-0000-0000', email: 'hello@example.com', party: d.party, table: d.table, status: 'booked', request: d.request || '' };
+    if (!base.some(r => r.no === mine.no)) base.push(mine);
+    return base.concat(log.added).map(r => Object.assign({}, r, log.patch[r.no]));
+  }
+  function updateReservation(no, change) { const log = resLog(); log.patch[no] = Object.assign(log.patch[no] || {}, change); sset('bt.res', log); }
+  function addReservation(r) { const log = resLog(); log.added.push(r); sset('bt.res', log); }
+  function resetReservations() { try { sessionStorage.removeItem('bt.res'); } catch (e) {} }
+  const isActive = r => r.status !== 'noshow' && r.status !== 'cancelled';
+
+  /* ---------- 좌석 규칙 (손님 추천 · 워크인 · 테이블 이동 공통) ----------
+   * 좌석 수와 구역 인원 조건 위반이면 이유 문자열, 괜찮으면 null */
+  function seatRule(t, party, fl) {
+    if (t.seats < party) return `${t.seats}인 테이블이라 ${party}명은 앉을 수 없어요`;
+    const z = zoneOf(t, fl);
+    if (z && z.minParty && party < z.minParty) return `${z.name}은 ${z.minParty}명 이상만 받아요`;
+    if (z && z.maxParty && party > z.maxParty) return `${z.name}은 ${z.maxParty}명까지만 받아요`;
+    return null;
+  }
+  /* 같은 날 같은 테이블에서 이용 시간이 겹치는 유효 예약 (except: 자기 자신 예약번호) */
+  function tableClash(tableId, date, time, list, except) {
+    const dine = store().dineMinutes;
+    return list.find(r => r.no !== except && isActive(r) && r.table === tableId && r.date === date && Math.abs(toMin(r.time) - toMin(time)) < dine) || null;
+  }
 
   /* ---------- 날짜 / 시간 ---------- */
   const pad = (n, w) => String(n).padStart(w || 2, '0');
@@ -106,5 +140,6 @@ window.BT = (function () {
     });
   });
 
-  return { YEAR, MONTH, TODAY, store, floors, allTables, findTable, zoneOf, url, go, draft, saveDraft, pad, toMin, toHHMM, parseDate, iso, fmtDate, octoberDays, slots, timeCheck, esc, toast };
+  return { YEAR, MONTH, TODAY, NOW, store, floors, allTables, findTable, zoneOf, url, go, draft, saveDraft,
+    guestNo, reservations, updateReservation, addReservation, resetReservations, isActive, seatRule, tableClash, sget, sset, pad, toMin, toHHMM, parseDate, iso, fmtDate, octoberDays, slots, timeCheck, esc, toast };
 })();
