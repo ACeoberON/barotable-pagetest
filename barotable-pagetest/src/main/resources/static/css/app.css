@@ -102,7 +102,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 .grid { display: grid; gap: 18px; }
 .cols-3 { grid-template-columns: 1.15fr 1fr 1fr; }
-.cols-main-side { grid-template-columns: minmax(0, 1fr) 320px; align-items: start; }
+.cols-main-side { grid-template-columns: minmax(0, 1fr) var(--side-w, 320px); align-items: start; }
 .cols-2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
 @media (max-width: 960px) { .cols-3 { grid-template-columns: 1fr 1fr; } .cols-3 > :first-child { grid-column: 1 / -1; } .cols-main-side { grid-template-columns: 1fr; } }
 @media (max-width: 680px) { .cols-3, .cols-2 { grid-template-columns: 1fr; } }
