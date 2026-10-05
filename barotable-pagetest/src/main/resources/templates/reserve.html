@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>바로테이블 · 좌석 선택</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&amp;family=IBM+Plex+Mono:wght@500;600&amp;display=swap">
+  <link rel="stylesheet" href="../static/css/app.css" th:href="@{/css/app.css}">
+</head>
+<!-- C-03 실제 테이블을 보고 고르는 예약 + C-AI 채팅 팝업 -->
+<body data-depth="0" data-screen="reserve" th:data-server="true">
+  <header class="site-head">
+    <div class="wrap">
+      <a class="brand" href="index.html" th:href="@{/}" data-go="index">바로테이블</a>
+      <span class="head-store" id="head-store">바로키친 성수점</span>
+      <span class="head-spacer"></span>
+      <nav class="steps" aria-label="예약 단계">
+        <span class="on"><b>1</b>좌석 선택</span><i></i>
+        <span><b>2</b>정보 확인</span><i></i>
+        <span><b>3</b>완료</span>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page wrap">
+    <div class="page-title">
+      <div>
+        <h1>테이블을 보고 고르세요</h1>
+        <p id="who-line">예약 조건을 고르면 앉을 수 있는 자리가 표시됩니다.</p>
+      </div>
+    </div>
+
+    <!-- 예약 조건 -->
+    <section class="card cond" aria-label="예약 조건">
+      <div class="cond-row">
+        <div class="cond-label">날짜<small>10월 중 선택</small></div>
+        <div style="min-width:0">
+          <div class="month-head"><strong>2026년 10월</strong><span class="faint" style="font-size:12.5px">지난 날짜는 선택할 수 없어요</span></div>
+          <div class="date-strip" id="date-strip" role="listbox" aria-label="10월 날짜"></div>
+        </div>
+      </div>
+      <div class="cond-row">
+        <div class="cond-label">시간<small id="hours-small">11:30–22:00</small></div>
+        <div class="time-groups" id="time-groups"></div>
+      </div>
+      <div class="cond-row">
+        <div class="cond-label">인원</div>
+        <div class="row">
+          <div class="stepper" role="group" aria-label="인원">
+            <button type="button" id="p-minus" aria-label="인원 줄이기">−</button>
+            <output id="p-val" aria-live="polite">4명</output>
+            <button type="button" id="p-plus" aria-label="인원 늘리기">+</button>
+          </div>
+          <span class="hint">1–8명 · 그 이상은 매장으로 문의</span>
+          <span class="badge badge-indigo" id="req-badge" hidden></span>
+        </div>
+      </div>
+    </section>
+
+    <div class="grid cols-main-side" style="margin-top:18px">
+      <!-- 좌석도 -->
+      <section class="card" aria-label="좌석도">
+        <div class="card-head">
+          <div class="tabs" id="floor-tabs" role="tablist" aria-label="층 선택"></div>
+          <div class="legend">
+            <span><i></i>가능</span><span><i class="l-sel"></i>선택</span><span><i class="l-rec"></i>추천</span><span><i class="l-no"></i>예약됨</span>
+          </div>
+        </div>
+        <div class="zone-filter" id="zone-filter" aria-label="구역 필터" style="margin-bottom:14px"></div>
+        <div class="map-scroll"><div id="map"></div></div>
+        <p class="hint" style="margin-top:10px">회색 빗금 테이블은 이미 예약된 자리입니다.</p>
+      </section>
+
+      <!-- 선택 패널 -->
+      <aside class="card sel-panel stack" id="sel-panel" aria-live="polite"></aside>
+    </div>
+  </main>
+
+  <!-- C-AI 채팅 팝업 -->
+  <button class="fab" type="button" id="ai-fab" aria-haspopup="dialog" aria-controls="chat-pop" aria-expanded="false">
+    <span class="ai-mark">AI</span><span>채팅으로 예약</span>
+  </button>
+  <section class="chat-pop" id="chat-pop" role="dialog" aria-modal="false" aria-labelledby="chat-title" hidden>
+    <div class="chat-head">
+      <span class="ai-mark" aria-hidden="true">AI</span>
+      <div>
+        <h2 id="chat-title">예약 도우미</h2>
+        <p>날짜 · 시간 · 인원 · 요청사항만 정리해요</p>
+      </div>
+      <button class="x" type="button" id="chat-close" aria-label="채팅 닫기">×</button>
+    </div>
+    <div class="chat-guard">이름·연락처는 채팅에 입력하지 마세요. 입력칸에서 따로 받습니다.</div>
+    <div class="chat-body" id="chat-body" aria-live="polite"></div>
+    <div class="chat-suggest" id="chat-suggest"></div>
+    <form class="chat-input" id="chat-form" autocomplete="off">
+      <label class="sr-only" for="chat-text">메시지</label>
+      <input id="chat-text" placeholder="예) 이번 토요일 저녁 7시 4명, 아이 의자 필요해요">
+      <button type="submit" aria-label="보내기">↑</button>
+    </form>
+  </section>
+
+  <script src="../static/js/data.js" th:src="@{/js/data.js}"></script>
+  <script src="../static/js/common.js" th:src="@{/js/common.js}"></script>
+  <script src="../static/js/seatmap.js" th:src="@{/js/seatmap.js}"></script>
+  <script src="../static/js/pages/reserve.js" th:src="@{/js/pages/reserve.js}"></script>
+  <script src="../static/js/ai-chat.js" th:src="@{/js/ai-chat.js}"></script>
+</body>
+</html>

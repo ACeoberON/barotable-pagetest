@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>바로테이블 · 예약 완료</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&amp;family=IBM+Plex+Mono:wght@500;600&amp;display=swap">
+  <link rel="stylesheet" href="../static/css/app.css" th:href="@{/css/app.css}">
+</head>
+<!-- C-06 예약 완료와 비회원 조회 -->
+<body data-depth="0" data-screen="complete" th:data-server="true">
+  <header class="site-head">
+    <div class="wrap">
+      <a class="brand" href="index.html" th:href="@{/}" data-go="index">바로테이블</a>
+      <span class="head-store" id="head-store">바로키친 성수점</span>
+      <span class="head-spacer"></span>
+      <nav class="steps" aria-label="예약 단계">
+        <span class="done"><b>✓</b>좌석 선택</span><i></i>
+        <span class="done"><b>✓</b>정보 확인</span><i></i>
+        <span class="on"><b>3</b>완료</span>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page wrap">
+    <div class="grid cols-main-side" style="grid-template-columns:minmax(0,1fr) 360px">
+      <section class="card stack" aria-labelledby="done-title" id="done-card">
+        <span class="badge badge-solid" style="align-self:flex-start" id="done-badge">RESERVATION CONFIRMED</span>
+        <div class="row" style="justify-content:space-between;align-items:flex-start;gap:20px">
+          <div class="stack" style="gap:8px;min-width:0;flex:1">
+            <h1 id="done-title" style="font-size:clamp(22px,3vw,28px)">예약이 완료되었습니다</h1>
+            <p>예약번호 <b class="mono" id="d-no" style="color:var(--teal-deep)">BT-20261010-0031</b></p>
+          </div>
+          <figure style="margin:0;display:flex;flex-direction:column;align-items:center;gap:6px">
+            <div class="qr" aria-label="QR 코드 자리"><span class="hint">QR 코드</span></div>
+            <figcaption class="hint">매장에서 보여 주세요</figcaption>
+          </figure>
+        </div>
+        <hr class="divider">
+        <dl class="kv" id="d-info"></dl>
+        <div class="stack" style="gap:8px">
+          <p class="notice good">확인 이메일을 hello@example.com(으)로 보냈습니다.</p>
+          <p class="notice">방문 전날 알림 이메일을 한 번 더 보냅니다.</p>
+        </div>
+        <div class="row">
+          <a class="btn btn-ghost" href="index.html" th:href="@{/}" data-go="index">처음으로</a>
+          <a class="btn btn-ghost" href="reserve.html" th:href="@{/reserve}" data-go="reserve">다른 날짜 예약</a>
+        </div>
+      </section>
+
+      <section class="card stack" aria-labelledby="lk-title">
+        <div>
+          <h2 id="lk-title">비회원 예약 조회</h2>
+          <p class="card-sub">예약번호와 연락처를 입력하세요</p>
+        </div>
+        <div class="stack">
+          <div class="field"><label for="lk-no">예약번호</label><input class="input mono" id="lk-no" value="BT-20261010-0031"></div>
+          <div class="field"><label for="lk-phone">연락처</label><input class="input mono" id="lk-phone" value="010-0000-0000"></div>
+          <a class="btn btn-primary" href="lookup.html" th:href="@{/reservations/lookup}" data-go="lookup">예약 조회</a>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="../static/js/data.js" th:src="@{/js/data.js}"></script>
+  <script src="../static/js/common.js" th:src="@{/js/common.js}"></script>
+  <script src="../static/js/pages/complete.js" th:src="@{/js/pages/complete.js}"></script>
+</body>
+</html>
