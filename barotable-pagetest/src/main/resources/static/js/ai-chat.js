@@ -178,7 +178,7 @@
     add(el);
     const go = el.querySelector('[data-act="go"]');
     if (go) go.addEventListener('click', () => {
-      window.ReservePage.apply({ date: slot.date, time: slot.time, party: slot.party, request: slot.requests.join(', ') });
+      window.ReservePage.apply({ date: slot.date, time: slot.time, party: slot.party, request: slot.requests.join(', '), prefs: slot.prefs.slice() });
       bot('좌석도에 조건을 적용했어요. 테이블을 직접 골라 주세요.');
       close();
       BT.toast('AI가 정리한 조건을 좌석도에 적용했어요');
