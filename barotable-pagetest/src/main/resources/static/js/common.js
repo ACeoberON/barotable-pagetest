@@ -13,7 +13,9 @@ window.BT = (function () {
   function sset(key, val) { try { sessionStorage.setItem(key, JSON.stringify(val)); } catch (e) {} }
 
   const store = () => D.STORE;
-  const floors = () => JSON.parse(JSON.stringify(D.FLOORS));
+  /* 좌석도 편집기(editor.js)에서 저장한 배치('bt.floors')가 있으면 그것을, 없으면 하드코딩 배치를 쓴다.
+   * 실제 구현: PUT /api/owner/layout -> GET /api/stores/{slug}/layout */
+  const floors = () => JSON.parse(JSON.stringify(sget('bt.floors', null) || D.FLOORS));
   function allTables(fl) {
     const out = [];
     (fl || floors()).forEach(f => f.tables.forEach(t => out.push(Object.assign({ floor: f.id, floorName: f.name }, t))));
