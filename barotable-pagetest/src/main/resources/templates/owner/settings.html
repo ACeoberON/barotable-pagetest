@@ -55,6 +55,16 @@
             <label class="switch"><input type="checkbox" id="s-n1" checked><span class="track"></span>예약 확정 시 확인 이메일 보내기</label>
             <label class="switch"><input type="checkbox" id="s-n2" checked><span class="track"></span>방문 전날 알림 이메일 보내기</label>
           </section>
+
+          <section class="card stack" aria-labelledby="s4" style="grid-column:1/-1">
+            <h2 id="s4">AI 채팅 해석</h2>
+            <p class="card-sub">채팅 문장은 규칙 파서가 먼저 읽습니다. 규칙으로 읽지 못한 문장만 아래에서 고른 방식으로 해석합니다. 테이블은 AI가 고르지 않습니다.</p>
+            <div class="radio-cards" role="radiogroup" aria-labelledby="s4">
+              <label class="radio-card"><input type="radio" name="s-ai" value="local" checked><b>로컬 LLM (기본)</b><span>매장 서버의 소형 모델이 해석합니다. 문장이 외부로 나가지 않고 사용료가 없습니다.</span></label>
+              <label class="radio-card"><input type="radio" name="s-ai" value="external"><b>외부 API (선택)</b><span>외부 AI 서비스에 문장을 보내 해석합니다. 호출마다 요금이 듭니다.</span></label>
+              <label class="radio-card"><input type="radio" name="s-ai" value="off"><b>사용 안 함</b><span>채팅 버튼을 숨깁니다. 손님은 날짜·시간·인원을 직접 고릅니다.</span></label>
+            </div>
+          </section>
         </div>
       </div>
     </main>

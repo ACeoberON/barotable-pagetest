@@ -22,7 +22,7 @@ window.BT_DATA = (function () {
     slotLimit: 8,
     allowSeatChoice: true,
     noShowWarn: 2,
-    ai: 'openai', // openai | local | off
+    ai: 'local', // local(로컬 LLM, 기본) | external(외부 API, 선택) | off
     notify: { confirm: true, dayBefore: true }
   };
 
