@@ -1,6 +1,6 @@
 /* C-03 좌석도 선택
  * 구현: 10월 날짜 선택, 11:30–22:00(브레이크 제외) 시간 선택, 층 탭 · 구역 필터, AI 채팅 조건 적용
- * 고정: 예약된 테이블(BT_DATA.CUSTOMER_RESERVED)
+ * 막힌 자리: 고른 날짜·시간과 이용 시간(dineMinutes)이 겹치는 예약이 있는 테이블
  * 추천: AI가 아니라 아래 규칙 엔진이 고른다. 최종 선택은 손님.
  */
 (function () {
@@ -8,24 +8,38 @@
   const fl = BT.floors();
   const d0 = BT.draft();
   const days = BT.octoberDays();
-  const RESERVED = BT_DATA.CUSTOMER_RESERVED;
+  const DINE = BT.store().dineMinutes;
+  /* 매장 예약 (하드코딩). 날짜가 없는 항목은 점주 화면 기준일(10/5) 예약 */
+  const BOOKINGS = BT_DATA.OWNER_RESERVATIONS.map(r => Object.assign({ date: BT_DATA.OWNER_TODAY }, r))
+    .filter(r => r.status !== 'cancelled' && r.status !== 'noshow');
 
   /* ---------- 규칙 엔진 ----------
-   * 좌석 부족 · 이미 예약 · 구역 인원 조건 위반을 빼고, 남은 후보 중 좌석 수가 가장 작은 테이블.
-   * 실제 구현에서는 날짜·시간별 예약(이용 시간 겹침)으로 RESERVED를 계산한다. */
+   * 1) 이미 예약(같은 날, 이용 시간 겹침) · 좌석 부족 · 구역 인원 조건 위반을 뺀다.
+   * 2) 남은 후보 중 채팅 요청(창가 · 바 등)과 맞는 테이블을 먼저, 그 안에서 좌석 수가 가장 작은 테이블.
+   * 점주 화면의 BT.tableClash와 같은 겹침 기준이다. */
+  const clash = t => BOOKINGS.find(r => r.table === t.id && r.date === S.date && Math.abs(BT.toMin(r.time) - BT.toMin(S.time)) < DINE) || null;
   function violation(t, party) {
-    if (RESERVED.includes(t.id)) return '이미 예약된 자리예요';
+    const c = clash(t);
+    if (c) return `${c.time}에 예약이 있어 ${BT.toHHMM(BT.toMin(c.time) + DINE)}까지 쓸 수 없어요`;
     if (t.seats < party) return `${t.seats}인 테이블이라 ${party}명은 앉을 수 없어요`;
     const z = BT.zoneOf(t, fl);
     if (z && z.minParty && party < z.minParty) return `${z.name}은 ${z.minParty}명 이상만 예약돼요`;
     if (z && z.maxParty && party > z.maxParty) return `${z.name}은 ${z.maxParty}명까지만 예약돼요`;
     return null;
   }
+  /* 채팅 요청(ai-chat.js의 prefs)과 테이블이 몇 개나 맞는지 */
+  function prefScore(t) {
+    return S.prefs.filter(p => p === '룸' ? t.shape === 'room' : /^\d층$/.test(p) ? t.floorName === p : t.tags.includes(p)).length;
+  }
   function recommend(party) {
-    return BT.allTables(fl).filter(t => !violation(t, party)).sort((a, b) => a.seats - b.seats)[0] || null;
+    const ok = BT.allTables(fl).filter(t => !violation(t, party));
+    const best = Math.max(0, ...ok.map(prefScore));
+    const pool = best > 0 ? ok.filter(t => prefScore(t) === best) : ok;
+    const t = pool.sort((a, b) => a.seats - b.seats)[0] || null;
+    return t && { t, matched: best > 0 };
   }
 
-  const S = { date: d0.date, time: d0.time, party: d0.party, floor: fl[0].id, zone: 'all', selected: null, request: '' };
+  const S = { date: d0.date, time: d0.time, party: d0.party, floor: fl[0].id, zone: 'all', selected: null, request: '', prefs: [] };
 
   /* ---------- 날짜: 10월 ---------- */
   function renderDates() {
@@ -35,7 +49,7 @@
         data-date="${x.iso}" ${x.past ? 'disabled' : ''} aria-selected="${x.iso === S.date}" aria-label="10월 ${x.day}일 ${x.week}요일">
         <span class="w">${x.today ? '오늘' : x.week}</span><span class="d">${x.day}</span>
       </button>`).join('');
-    box.querySelectorAll('.date-chip:not([disabled])').forEach(b => b.addEventListener('click', () => { S.date = b.dataset.date; renderDates(); renderPanel(); }));
+    box.querySelectorAll('.date-chip:not([disabled])').forEach(b => b.addEventListener('click', () => { S.date = b.dataset.date; renderDates(); renderMap(); renderPanel(); }));
     const on = box.querySelector('.on');
     if (on) box.scrollLeft = Math.max(0, on.offsetLeft - box.offsetLeft - 60);
   }
@@ -49,7 +63,7 @@
       <div class="time-group"><div class="time-group-label"><b>점심</b>${lunch[0].time}–${lunch[lunch.length - 1].time}</div><div class="chips">${lunch.map(chip).join('')}</div></div>
       <div class="time-group"><div class="time-group-label"><b>브레이크</b>예약 불가</div><div class="chips">${brk.map(chip).join('')}<span class="break-note">${h.breakStart}–${h.breakEnd} 준비 시간</span></div></div>
       <div class="time-group"><div class="time-group-label"><b>저녁</b>${dinner[0].time}–${dinner[dinner.length - 1].time}</div><div class="chips">${dinner.map(chip).join('')}<span class="hint" style="align-self:center">${h.close} 영업 종료</span></div></div>`;
-    document.querySelectorAll('#time-groups .chip:not([disabled])').forEach(b => b.addEventListener('click', () => { S.time = b.dataset.time; renderTimes(); renderPanel(); }));
+    document.querySelectorAll('#time-groups .chip:not([disabled])').forEach(b => b.addEventListener('click', () => { S.time = b.dataset.time; renderTimes(); renderMap(); renderPanel(); }));
   }
   /* ---------- 인원 ---------- */
   function renderParty() {
@@ -75,11 +89,11 @@
     const f = fl.find(x => x.id === S.floor);
     SeatMap.render($('#map'), f, {
       selected: S.selected,
-      recommended: S.selected ? null : (recommend(S.party) || {}).id,
+      recommended: S.selected ? null : ((recommend(S.party) || {}).t || {}).id,
       zoneFilter: S.zone,
-      statusOf: t => RESERVED.includes(t.id) ? { cls: 'reserved', sub: '예약됨' } : { cls: 'available' },
+      statusOf: t => clash(t) ? { cls: 'reserved', sub: '예약됨' } : { cls: 'available' },
       onSelect: t => {
-        if (RESERVED.includes(t.id)) return;
+        if (clash(t)) return;
         S.selected = S.selected === t.id ? null : t.id;
         renderMap(); renderPanel();
       }
@@ -109,10 +123,14 @@
         BT.go('confirm');
       });
     } else {
-      const rec = recommend(S.party);
+      const r = recommend(S.party), rec = r && r.t;
+      const want = S.prefs.join(' · ');
+      const why = !want ? `${S.party}명이 앉을 수 있는 빈 테이블 중 가장 작은 자리예요`
+        : r && r.matched ? `요청하신 ${BT.esc(want)} 자리 중 가장 작은 자리예요`
+        : `요청하신 ${BT.esc(want)} 자리는 비어 있지 않아요. 대신 ${S.party}명이 앉을 수 있는 가장 작은 자리를 추천해요`;
       p.innerHTML = `<span class="badge badge-gray" style="align-self:flex-start">현재 선택 없음</span>
         <div><h2>테이블을 골라 주세요</h2><p class="card-sub" style="margin-top:4px">${cond}</p></div>
-        ${rec ? `<div class="notice warn"><b>추천 ${rec.id}</b> · ${rec.seats}인 · ${BT.esc(rec.floorName)} ${BT.esc((BT.zoneOf(rec, fl) || {}).name || '')}<br><span style="font-size:12px">${S.party}명이 앉을 수 있는 빈 테이블 중 가장 작은 자리예요</span></div>`
+        ${rec ? `<div class="notice warn"><b>추천 ${rec.id}</b> · ${rec.seats}인 · ${BT.esc(rec.floorName)} ${BT.esc((BT.zoneOf(rec, fl) || {}).name || '')}<br><span style="font-size:12px">${why}</span></div>`
           : `<div class="notice bad">${S.party}명이 앉을 수 있는 빈 테이블이 없어요. 인원을 바꾸거나 매장에 문의해 주세요.</div>`}`;
     }
   }
@@ -120,7 +138,7 @@
   /* AI 채팅에서 확인한 조건 적용 */
   window.ReservePage = {
     apply(patch) {
-      Object.assign(S, { date: patch.date, time: patch.time, party: patch.party, request: patch.request || '', selected: null });
+      Object.assign(S, { date: patch.date, time: patch.time, party: patch.party, request: patch.request || '', prefs: patch.prefs || [], selected: null });
       renderDates(); renderTimes(); renderParty(); renderMap(); renderPanel();
     }
   };
