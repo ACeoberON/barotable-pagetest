@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>바로테이블 · 서비스 관리자</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&amp;family=IBM+Plex+Mono:wght@500;600&amp;display=swap">
+  <link rel="stylesheet" href="../../static/css/app.css" th:href="@{/css/app.css}">
+</head>
+<!-- A-02 서비스 관리자 (점주 계정 승인 · 서비스 상태) -->
+<body data-depth="1" data-screen="admin" th:data-server="true">
+  <div class="owner-shell">
+    <aside class="side" aria-label="관리자 메뉴">
+      <a class="brand" href="../index.html" th:href="@{/}" data-go="index">바로테이블</a>
+      <div class="store">서비스 관리자</div>
+      <a href="#approvals" class="on" aria-current="page">점주 계정 승인</a>
+      <a href="#services">서비스 상태</a>
+      <a href="#activity">최근 활동</a>
+      <span class="grow"></span>
+      <div class="who">admin@example.com<br>관리자 · <a href="../owner/login.html" th:href="@{/owner/login}" data-go="owner-login" style="display:inline;padding:0;color:inherit;text-decoration:underline">로그아웃</a></div>
+    </aside>
+    <main class="owner-main">
+      <div class="page-title">
+        <div>
+          <h1>서비스 관리자</h1>
+          <p>신규 점주 계정을 승인하고, 서비스 상태를 확인합니다.</p>
+        </div>
+        <span class="badge badge-teal" style="font-size:13px;padding:6px 12px">시스템 정상</span>
+      </div>
+
+      <section class="stats" id="stats" aria-label="서비스 요약"></section>
+
+      <div class="grid cols-main-side" style="margin-top:18px">
+        <section class="card stack" id="approvals" aria-labelledby="ap-title">
+          <div class="card-head" style="margin-bottom:0">
+            <div><h2 id="ap-title">점주 계정 승인</h2><p class="card-sub">신규 가입한 점주의 매장 정보를 확인하고 승인합니다. 승인 전에는 점주 화면에 들어갈 수 없습니다.</p></div>
+            <span class="badge badge-amber" id="ap-badge"></span>
+          </div>
+          <div class="stack" style="gap:10px" id="ap-list" aria-live="polite"></div>
+        </section>
+
+        <div class="stack" style="gap:18px;min-width:0">
+          <section class="card stack" id="services" aria-labelledby="sv-title">
+            <h2 id="sv-title">서비스 상태</h2>
+            <dl class="kv" id="sv-list"></dl>
+          </section>
+          <section class="card stack" aria-labelledby="ai-title">
+            <h2 id="ai-title">AI 예약 도우미 처리 방식</h2>
+            <div id="ai-box"></div>
+            <p class="hint">AI는 채팅 문장을 날짜·시간·인원·요청사항으로 정리하는 데까지만 씁니다. 테이블은 규칙으로 고르고, AI를 꺼도 웹 예약과 좌석 선택은 그대로 동작합니다.</p>
+          </section>
+          <section class="card stack" id="activity" aria-labelledby="ac-title">
+            <h2 id="ac-title">최근 관리자 활동</h2>
+            <ul class="result-list" id="ac-list"></ul>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="../../static/js/data.js" th:src="@{/js/data.js}"></script>
+  <script src="../../static/js/common.js" th:src="@{/js/common.js}"></script>
+  <script src="../../static/js/pages/admin.js" th:src="@{/js/pages/admin.js}"></script>
+</body>
+</html>
