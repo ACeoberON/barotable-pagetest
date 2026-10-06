@@ -97,13 +97,20 @@ window.BT_DATA = (function () {
     { no: 'BT-20261005-0025', time: '19:30', name: '강태민', phone: '010-8888-9999', email: 'taemin@example.com', party: 2, table: 'T02', status: 'booked',   request: '' },
     { no: 'BT-20261005-0027', time: '20:00', name: '오수아', phone: '010-1212-3434', email: 'sua@example.com', party: 4, table: 'T23', status: 'booked',   request: '테라스 담요' },
     { no: 'BT-20261005-0028', time: '20:00', name: '서예준', phone: '010-5656-7878', email: 'yejun@example.com', party: 2, table: 'T06', status: 'booked',   request: '' },
-    { no: 'BT-20261005-0030', time: '20:30', name: '문가은', phone: '010-9090-1010', email: 'gaeun@example.com', party: 6, table: 'R02', status: 'booked',   request: '' }
+    { no: 'BT-20261005-0030', time: '20:30', name: '문가은', phone: '010-9090-1010', email: 'gaeun@example.com', party: 6, table: 'R02', status: 'booked',   request: '' },
+    /* 손님 화면 시연용 다른 날짜 예약 (date가 있는 항목은 점주 대시보드의 오늘 목록에 안 나옴) */
+    { no: 'BT-20261010-0011', date: '2026-10-10', time: '12:00', name: '조하린', phone: '010-3131-2020', email: 'harin@example.com', party: 2, table: 'T01', status: 'booked', request: '' },
+    { no: 'BT-20261010-0024', date: '2026-10-10', time: '18:00', name: '배도현', phone: '010-4242-3030', email: 'dohyun@example.com', party: 2, table: 'T05', status: 'booked', request: '' },
+    { no: 'BT-20261010-0026', date: '2026-10-10', time: '18:30', name: '신유나', phone: '010-5353-4040', email: 'yuna@example.com', party: 6, table: 'R02', status: 'booked', request: '' },
+    { no: 'BT-20261010-0029', date: '2026-10-10', time: '19:00', name: '임서진', phone: '010-6464-5050', email: 'seojin@example.com', party: 2, table: 'T06', status: 'booked', request: '' },
+    { no: 'BT-20261010-0033', date: '2026-10-10', time: '19:30', name: '권나래', phone: '010-7575-6060', email: 'narae@example.com', party: 2, table: 'T22', status: 'booked', request: '야외 자리' },
+    { no: 'BT-20261010-0035', date: '2026-10-10', time: '20:00', name: '남궁현', phone: '010-8686-7070', email: 'hyun@example.com', party: 2, table: 'T09', status: 'booked', request: '' }
   ];
   /* 연락처별 누적 노쇼 횟수 */
   const NOSHOW_HISTORY = { '010-5555-1212': 2, '010-9090-1010': 1 };
 
 
-  /* 손님 좌석도에 '예약됨'으로 고정 표시할 테이블 */
+  /* (손님 좌석도는 이제 날짜·시간별로 계산하므로 이 목록을 쓰지 않는다. 좌석도 편집기의 삭제 잠금에서만 참고) */
   const CUSTOMER_RESERVED = ['T05', 'T06', 'T10', 'T22', 'R02'];
 
   return { STORE, FLOORS, OWNER_TODAY, OWNER_NOW, OWNER_RESERVATIONS, NOSHOW_HISTORY, CUSTOMER_RESERVED };
