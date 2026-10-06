@@ -147,6 +147,10 @@ window.BT = (function () {
     bar.innerHTML = `<span class="proto-tag">PAGE TEST</span><span class="proto-note">화면 설계 확인용 · 하드코딩 데이터</span>
       <label class="proto-jump"><span class="sr-only">화면 이동</span><select id="proto-jump">${SCREENS.map(s => `<option value="${s[0]}" ${s[0] === cur ? 'selected' : ''}>${s[1]}  ${s[2]}</option>`).join('')}</select></label>`;
     document.body.prepend(bar);
+    /* 발표용 화면 구성도 패널 (static/js/screen-map.js) */
+    const sm = document.createElement('script');
+    sm.src = document.body.dataset.server === 'true' ? '/js/screen-map.js' : '../'.repeat(Number(document.body.dataset.depth || 0) + 1) + 'static/js/screen-map.js';
+    document.body.appendChild(sm);
     /* 매장 입장 화면의 영업시간 표시도 운영 조건을 따른다 */
     const ho = document.getElementById('h-open'), hb = document.getElementById('h-break'), h = store().hours;
     if (ho) ho.textContent = `${h.open} – ${h.close}`;
