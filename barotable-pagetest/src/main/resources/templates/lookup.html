@@ -19,27 +19,18 @@
   <main class="page wrap" style="max-width:560px">
     <div class="page-title"><div><h1>비회원 예약 조회</h1><p>예약번호와 연락처로 예약을 확인하거나 취소할 수 있습니다.</p></div></div>
     <section class="card stack" aria-label="예약 조회">
-      <div class="stack">
-        <div class="field"><label for="lk-no">예약번호</label><input class="input mono" id="lk-no" value="BT-20261010-0031"></div>
-        <div class="field"><label for="lk-phone">연락처</label><input class="input mono" id="lk-phone" value="010-0000-0000"></div>
-        <button class="btn btn-primary" type="button">예약 조회</button>
-      </div>
-      <hr class="divider">
-      <div class="stack">
-        <div class="row" style="justify-content:space-between"><b class="mono">BT-20261010-0031</b><span class="badge badge-teal">예약 확정</span></div>
-        <dl class="kv">
-          <dt>예약자</dt><dd>홍길동</dd>
-          <dt>일시</dt><dd>2026.10.10 (토) 19:00</dd>
-          <dt>인원</dt><dd>4명</dd>
-          <dt>테이블</dt><dd>T03 · 4인석 · 1층 창가 구역</dd>
-          <dt>요청사항</dt><dd>아이 의자</dd>
-        </dl>
-        <button type="button" class="btn btn-danger btn-block">예약 취소</button>
-      </div>
+      <form class="stack" id="lk-form" autocomplete="off">
+        <div class="field"><label for="lk-no">예약번호</label><input class="input mono" id="lk-no" value="BT-20261010-0031" required></div>
+        <div class="field"><label for="lk-phone">연락처</label><input class="input mono" id="lk-phone" value="010-0000-0000" inputmode="tel" required></div>
+        <button class="btn btn-primary" type="submit">예약 조회</button>
+      </form>
+      <div class="stack" id="lk-result" aria-live="polite" hidden></div>
     </section>
+    <p class="hint" style="margin-top:12px">시연용 예약: BT-20261005-0025 / 010-8888-9999 (오늘 19:30, 취소 가능)</p>
     <p style="margin-top:16px"><a href="index.html" th:href="@{/}" data-go="index">← 매장 첫 화면</a></p>
   </main>
   <script src="../static/js/data.js" th:src="@{/js/data.js}"></script>
   <script src="../static/js/common.js" th:src="@{/js/common.js}"></script>
+  <script src="../static/js/pages/lookup.js" th:src="@{/js/pages/lookup.js}"></script>
 </body>
 </html>
