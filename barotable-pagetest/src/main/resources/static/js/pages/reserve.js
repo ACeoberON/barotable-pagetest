@@ -1,6 +1,9 @@
 /* C-03 좌석도 선택
- * 구현: 10월 날짜 선택, 11:30–22:00(브레이크 제외) 시간 선택, 층 탭 · 구역 필터, AI 채팅 조건 적용
- * 막힌 자리: 고른 날짜·시간과 이용 시간(dineMinutes)이 겹치는 예약이 있는 테이블
+ * 구현: 10월 날짜 선택, 영업시간 안 30분 단위 시간 선택(브레이크 제외), 층 탭 · 구역 필터, AI 채팅 조건 적용
+ * 운영 조건(BT.store())의 영업시간 · 인원 범위 · 이용 시간 · 자리 직접 고르기 허용 여부를 따른다.
+ * 막힌 자리: 고른 날짜·시간과 이용 시간(dineMinutes)이 겹치는 예약이 있는 테이블.
+ *   예약 목록은 BT.reservations()라서 점주의 전화 예약 · 테이블 이동 · 손님 취소가 그대로 반영된다.
+ * 오늘은 기준 시각(BT.NOW) 이후 시간만 고를 수 있다.
  * 추천: AI가 아니라 아래 규칙 엔진이 고른다. 최종 선택은 손님.
  */
 (function () {
@@ -8,24 +11,30 @@
   const fl = BT.floors();
   const d0 = BT.draft();
   const days = BT.octoberDays();
-  const DINE = BT.store().dineMinutes;
-  /* 매장 예약 (하드코딩). 날짜가 없는 항목은 점주 화면 기준일(10/5) 예약 */
-  const BOOKINGS = BT_DATA.OWNER_RESERVATIONS.map(r => Object.assign({ date: BT_DATA.OWNER_TODAY }, r))
-    .filter(r => r.status !== 'cancelled' && r.status !== 'noshow');
+  const st = BT.store(), DINE = st.dineMinutes;
+  /* 매장 전체 예약. 지금 고르고 있는 내 예약(임시 저장분)은 내 자리를 막지 않도록 뺀다 */
+  const bookings = () => { const mine = BT.guestNo(BT.draft()); return BT.reservations().filter(r => r.no !== mine); };
+  const isPast = time => S.date === BT.TODAY && BT.toMin(time) <= BT.toMin(BT.NOW);
 
   /* ---------- 규칙 엔진 ----------
    * 1) 이미 예약(같은 날, 이용 시간 겹침) · 좌석 부족 · 구역 인원 조건 위반을 뺀다.
    * 2) 남은 후보 중 채팅 요청(창가 · 바 등)과 맞는 테이블을 먼저, 그 안에서 좌석 수가 가장 작은 테이블.
-   * 점주 화면의 BT.tableClash와 같은 겹침 기준이다. */
-  const clash = t => BOOKINGS.find(r => r.table === t.id && r.date === S.date && Math.abs(BT.toMin(r.time) - BT.toMin(S.time)) < DINE) || null;
+   * 점주 화면과 같은 공통 규칙(BT.tableClash, BT.seatRule)을 쓴다. */
+  const clash = t => BT.tableClash(t.id, S.date, S.time, bookings());
   function violation(t, party) {
+    if (isPast(S.time)) return `${BT.NOW} 이전 시간은 예약할 수 없어요`;
+    const tc = BT.timeCheck(S.time);
+    if (!tc.ok) return tc.reason;
     const c = clash(t);
     if (c) return `${c.time}에 예약이 있어 ${BT.toHHMM(BT.toMin(c.time) + DINE)}까지 쓸 수 없어요`;
-    if (t.seats < party) return `${t.seats}인 테이블이라 ${party}명은 앉을 수 없어요`;
-    const z = BT.zoneOf(t, fl);
-    if (z && z.minParty && party < z.minParty) return `${z.name}은 ${z.minParty}명 이상만 예약돼요`;
-    if (z && z.maxParty && party > z.maxParty) return `${z.name}은 ${z.maxParty}명까지만 예약돼요`;
-    return null;
+    return BT.seatRule(t, party, fl);
+  }
+  /* 고른 시간이 지났거나 영업시간 · 브레이크에 걸리면 다음 예약 가능 시간으로 옮긴다 */
+  function fixTime() {
+    if (!isPast(S.time) && BT.slots().some(x => x.time === S.time && !x.break)) return false;
+    const next = BT.slots().find(x => !x.break && !isPast(x.time));
+    if (next) { S.time = next.time; return true; }
+    return false;
   }
   /* 채팅 요청(ai-chat.js의 prefs)과 테이블이 몇 개나 맞는지 */
   function prefScore(t) {
@@ -39,7 +48,7 @@
     return t && { t, matched: best > 0 };
   }
 
-  const S = { date: d0.date, time: d0.time, party: d0.party, floor: fl[0].id, zone: 'all', selected: null, request: '', prefs: [] };
+  const S = { date: d0.date, time: d0.time, party: Math.min(st.maxParty, Math.max(st.minParty, d0.party)), floor: fl[0].id, zone: 'all', selected: null, request: '', prefs: [] };
 
   /* ---------- 날짜: 10월 ---------- */
   function renderDates() {
@@ -49,27 +58,30 @@
         data-date="${x.iso}" ${x.past ? 'disabled' : ''} aria-selected="${x.iso === S.date}" aria-label="10월 ${x.day}일 ${x.week}요일">
         <span class="w">${x.today ? '오늘' : x.week}</span><span class="d">${x.day}</span>
       </button>`).join('');
-    box.querySelectorAll('.date-chip:not([disabled])').forEach(b => b.addEventListener('click', () => { S.date = b.dataset.date; renderDates(); renderMap(); renderPanel(); }));
+    box.querySelectorAll('.date-chip:not([disabled])').forEach(b => b.addEventListener('click', () => { S.date = b.dataset.date; if (fixTime()) BT.toast(`오늘은 ${BT.NOW} 이후만 예약돼요. ${S.time}로 바꿨어요`); renderDates(); renderTimes(); renderMap(); renderPanel(); }));
     const on = box.querySelector('.on');
     if (on) box.scrollLeft = Math.max(0, on.offsetLeft - box.offsetLeft - 60);
   }
-  /* ---------- 시간: 11:30–22:00, 브레이크 15:00–17:00 ---------- */
+  /* ---------- 시간: 운영 조건의 영업시간, 브레이크는 선택 불가 ---------- */
   function renderTimes() {
     const sl = BT.slots(), h = BT.store().hours;
     const g = p => sl.filter(x => x.period === p);
-    const chip = x => `<button type="button" class="chip ${x.time === S.time ? 'on' : ''}" data-time="${x.time}" ${x.break ? 'disabled title="브레이크 타임"' : ''} aria-pressed="${x.time === S.time}">${x.time}</button>`;
+    const chip = x => `<button type="button" class="chip ${x.time === S.time ? 'on' : ''}" data-time="${x.time}" ${x.break ? 'disabled title="브레이크 타임"' : isPast(x.time) ? 'disabled title="지난 시간"' : ''} aria-pressed="${x.time === S.time}">${x.time}</button>`;
     const lunch = g('lunch'), brk = g('break'), dinner = g('dinner');
-    $('#time-groups').innerHTML = `
-      <div class="time-group"><div class="time-group-label"><b>점심</b>${lunch[0].time}–${lunch[lunch.length - 1].time}</div><div class="chips">${lunch.map(chip).join('')}</div></div>
-      <div class="time-group"><div class="time-group-label"><b>브레이크</b>예약 불가</div><div class="chips">${brk.map(chip).join('')}<span class="break-note">${h.breakStart}–${h.breakEnd} 준비 시간</span></div></div>
-      <div class="time-group"><div class="time-group-label"><b>저녁</b>${dinner[0].time}–${dinner[dinner.length - 1].time}</div><div class="chips">${dinner.map(chip).join('')}<span class="hint" style="align-self:center">${h.close} 영업 종료</span></div></div>`;
+    const range = a => a.length ? `${a[0].time}–${a[a.length - 1].time}` : '';
+    const hs = $('#hours-small'); if (hs) hs.textContent = `${h.open}–${h.close}`;
+    $('#time-groups').innerHTML =
+      (lunch.length ? `<div class="time-group"><div class="time-group-label"><b>점심</b>${range(lunch)}</div><div class="chips">${lunch.map(chip).join('')}</div></div>` : '') +
+      (brk.length ? `<div class="time-group"><div class="time-group-label"><b>브레이크</b>예약 불가</div><div class="chips">${brk.map(chip).join('')}<span class="break-note">${h.breakStart}–${h.breakEnd} 준비 시간</span></div></div>` : '') +
+      (dinner.length ? `<div class="time-group"><div class="time-group-label"><b>${lunch.length ? '저녁' : '예약 시간'}</b>${range(dinner)}</div><div class="chips">${dinner.map(chip).join('')}<span class="hint" style="align-self:center">${h.close} 영업 종료</span></div></div>` : '');
     document.querySelectorAll('#time-groups .chip:not([disabled])').forEach(b => b.addEventListener('click', () => { S.time = b.dataset.time; renderTimes(); renderMap(); renderPanel(); }));
   }
   /* ---------- 인원 ---------- */
   function renderParty() {
     $('#p-val').textContent = S.party + '명';
-    $('#p-minus').disabled = S.party <= 1;
-    $('#p-plus').disabled = S.party >= 8;
+    $('#p-minus').disabled = S.party <= st.minParty;
+    $('#p-plus').disabled = S.party >= st.maxParty;
+    const ph = $('#p-hint'); if (ph) ph.textContent = `${st.minParty}–${st.maxParty}명 · 그 이상은 매장으로 문의`;
     const rb = $('#req-badge'); rb.hidden = !S.request; rb.textContent = S.request ? '요청사항 · ' + S.request : '';
   }
   $('#p-minus').addEventListener('click', () => { S.party--; renderParty(); renderMap(); renderPanel(); });
@@ -93,6 +105,7 @@
       zoneFilter: S.zone,
       statusOf: t => clash(t) ? { cls: 'reserved', sub: '예약됨' } : { cls: 'available' },
       onSelect: t => {
+        if (!st.allowSeatChoice) { BT.toast('이 매장은 자리를 자동으로 배정해요. 오른쪽 추천 자리로 예약됩니다'); return; }
         if (clash(t)) return;
         S.selected = S.selected === t.id ? null : t.id;
         renderMap(); renderPanel();
@@ -128,6 +141,20 @@
       const why = !want ? `${S.party}명이 앉을 수 있는 빈 테이블 중 가장 작은 자리예요`
         : r && r.matched ? `요청하신 ${BT.esc(want)} 자리 중 가장 작은 자리예요`
         : `요청하신 ${BT.esc(want)} 자리는 비어 있지 않아요. 대신 ${S.party}명이 앉을 수 있는 가장 작은 자리를 추천해요`;
+      if (!st.allowSeatChoice) {
+        /* 점주가 직접 고르기를 꺼 두면 규칙 엔진이 고른 자리로 바로 예약한다 */
+        p.innerHTML = `<span class="badge badge-indigo" style="align-self:flex-start">자동 배정</span>
+          <div><h2>${rec ? `${rec.id} · ${rec.seats}인 테이블` : '배정할 자리가 없어요'}</h2><p class="card-sub" style="margin-top:4px">${cond}</p></div>
+          ${rec ? `<p class="notice">${BT.esc(rec.floorName)} ${BT.esc((BT.zoneOf(rec, fl) || {}).name || '')} · ${why}</p><button class="btn btn-primary btn-block" id="go-auto">이 자리로 예약</button>`
+            : `<div class="notice bad">${S.party}명이 앉을 수 있는 빈 테이블이 없어요. 시간이나 인원을 바꿔 주세요.</div>`}`;
+        const ga = $('#go-auto');
+        if (ga) ga.addEventListener('click', () => {
+          if (violation(rec, S.party)) { renderMap(); renderPanel(); return; } // 저장 직전 재검사
+          BT.saveDraft({ date: S.date, time: S.time, party: S.party, table: rec.id, request: S.request });
+          BT.go('confirm');
+        });
+        return;
+      }
       p.innerHTML = `<span class="badge badge-gray" style="align-self:flex-start">현재 선택 없음</span>
         <div><h2>테이블을 골라 주세요</h2><p class="card-sub" style="margin-top:4px">${cond}</p></div>
         ${rec ? `<div class="notice warn"><b>추천 ${rec.id}</b> · ${rec.seats}인 · ${BT.esc(rec.floorName)} ${BT.esc((BT.zoneOf(rec, fl) || {}).name || '')}<br><span style="font-size:12px">${why}</span></div>`
@@ -139,9 +166,11 @@
   window.ReservePage = {
     apply(patch) {
       Object.assign(S, { date: patch.date, time: patch.time, party: patch.party, request: patch.request || '', prefs: patch.prefs || [], selected: null });
+      fixTime();
       renderDates(); renderTimes(); renderParty(); renderMap(); renderPanel();
     }
   };
 
+  fixTime();
   renderDates(); renderTimes(); renderParty(); renderFloors(); renderMap(); renderPanel();
 })();

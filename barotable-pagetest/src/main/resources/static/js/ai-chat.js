@@ -10,6 +10,10 @@
   const pop = $('#chat-pop'), fab = $('#ai-fab'), body = $('#chat-body'), input = $('#chat-text');
   if (!pop || !fab) return;
   const st = BT.store();
+  /* 운영 조건의 AI 설정: 사용 안 함이면 채팅 버튼을 숨기고, 2단계 해석기 이름을 설정에 맞춘다 */
+  if (st.ai === 'off') { fab.hidden = true; return; }
+  const LLM = st.ai === 'external' || st.ai === 'openai' ? '외부 API' : '로컬 LLM';
+  const LLM_BY = LLM === '외부 API' ? '외부 API가' : '로컬 LLM이';
   const slot = { date: null, time: null, party: null, requests: [], prefs: [] };
   let misses = 0, greeted = false;
 
@@ -166,6 +170,8 @@
     if (r.phone) bot('연락처나 이메일은 채팅에 저장하지 않아요. 다음 단계 입력칸에서 따로 받을게요.', 'warn');
     let got = false;
     ['date', 'time', 'party'].forEach(k => { if (r[k] != null) { slot[k] = r[k]; got = true; } });
+    // 오늘은 기준 시각(BT.NOW) 이후만 받는다
+    if (slot.date === BT.TODAY && slot.time && BT.toMin(slot.time) <= BT.toMin(BT.NOW)) { bot(`오늘은 ${BT.NOW} 이후로만 예약할 수 있어요. 다른 시간을 알려 주세요.`, 'warn'); slot.time = null; got = true; }
     r.requests.forEach(x => { if (!slot.requests.includes(x)) { slot.requests.push(x); got = true; } });
     r.prefs.forEach(x => { if (!slot.prefs.includes(x)) slot.prefs.push(x); });
     r.problems.forEach(p => { bot(p.msg, 'warn'); got = true; });
@@ -173,7 +179,7 @@
     if (!got && !r.phone) {
       misses++;
       if (misses >= 2) { fallback(); return; }
-      bot((via === 'llm' ? '규칙 파서와 로컬 LLM 모두 예약 정보를 찾지 못했어요.' : '죄송해요, 예약 정보를 찾지 못했어요.') + '\n"10월 10일 저녁 7시 4명"처럼 날짜·시간·인원을 알려 주세요.');
+      bot((via === 'llm' ? `규칙 파서와 ${LLM} 모두 예약 정보를 찾지 못했어요.` : '죄송해요, 예약 정보를 찾지 못했어요.') + '\n"10월 10일 저녁 7시 4명"처럼 날짜·시간·인원을 알려 주세요.');
       return;
     }
     misses = 0;
@@ -182,7 +188,8 @@
     if (missing.length) {
       const k = missing[0];
       if (k === 'date') bot('언제 방문하실까요? 10월 중 날짜로 알려 주세요.');
-      if (k === 'time') bot(r.timeHint === 'lunch' ? `점심은 ${st.hours.open}–${prevSlot(st.hours.breakStart)} 사이에 예약돼요. 몇 시쯤 오실까요?`
+      if (k === 'time' && slot.date === BT.TODAY) bot(`오늘은 ${BT.toHHMM(BT.toMin(BT.NOW) + (st.slotMinutes || 30))}–${prevSlot(st.hours.close)} 사이에 예약돼요. 몇 시쯤 오실까요?`);
+      else if (k === 'time') bot(r.timeHint === 'lunch' ? `점심은 ${st.hours.open}–${prevSlot(st.hours.breakStart)} 사이에 예약돼요. 몇 시쯤 오실까요?`
         : r.timeHint === 'dinner' ? `저녁은 ${st.hours.breakEnd}–${prevSlot(st.hours.close)} 사이에 예약돼요. 몇 시쯤 오실까요?`
         : `몇 시쯤 오실까요? 점심 ${st.hours.open}–${prevSlot(st.hours.breakStart)}, 저녁 ${st.hours.breakEnd}–${prevSlot(st.hours.close)} 사이로 골라 주세요.`);
       if (k === 'party') bot('몇 분이 오시나요?');
@@ -195,7 +202,7 @@
     const cell = (label, val) => `<div class="extract-cell ${val == null ? 'missing' : ''}"><span>${label}</span><b>${val == null ? '확인 필요' : BT.esc(val)}</b></div>`;
     el.innerHTML = `
       <div class="row" style="justify-content:space-between"><b style="font-size:13.5px">${done ? '예약 정보를 정리했어요' : '지금까지 정리한 내용'}</b><span class="badge badge-indigo">정해진 항목만 추출</span></div>
-      <div class="row"><span class="badge ${via === 'llm' ? 'badge-amber' : 'badge-teal'}" title="${via === 'llm' ? '규칙으로 읽지 못한 항목을 로컬 LLM에 맡겼어요' : '규칙 파서만으로 읽었어요'}">${via === 'llm' ? '로컬 LLM이 해석' : '규칙 파서로 해석'}</span></div>
+      <div class="row"><span class="badge ${via === 'llm' ? 'badge-amber' : 'badge-teal'}" title="${via === 'llm' ? '규칙으로 읽지 못한 항목을 ' + LLM + '에 맡겼어요' : '규칙 파서만으로 읽었어요'}">${via === 'llm' ? LLM_BY + ' 해석' : '규칙 파서로 해석'}</span></div>
       <div class="extract-grid">
         ${cell('날짜', slot.date ? BT.fmtDate(slot.date) : null)}
         ${cell('시간', slot.time)}
