@@ -555,6 +555,26 @@ table.list tr.dimmed td { color: var(--faint); }
 .smap-mark.hot { border-style: solid; background: color-mix(in srgb, var(--amber) 10%, transparent); }
 .smap-mark.pulse { animation: smap-pulse 1.2s ease-out 2; }
 @keyframes smap-pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--amber) 70%, transparent); } 100% { box-shadow: 0 0 0 14px transparent; } }
+.smap-tabs { display: flex; gap: 4px; padding: 8px 20px 0; background: var(--navy); }
+.smap-tabs button { font: inherit; font-size: 14px; font-weight: 700; border: 0; border-radius: 9px 9px 0 0; padding: 8px 14px; background: transparent; color: var(--on-navy-muted); cursor: pointer; }
+.smap-tabs button.on { background: var(--surface); color: var(--ink); }
+.smap-tabs button:focus-visible { outline: 2px solid var(--teal); outline-offset: -2px; }
+.smap-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.smap-small { font: inherit; font-size: 13px; font-weight: 700; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 6px 11px; cursor: pointer; }
+.smap-small:hover { border-color: var(--teal); }
+.smap-phone-wrap { position: relative; overflow: hidden; }
+.smap-phone { position: absolute; top: 0; left: 50%; width: 410px; height: 864px; padding: 10px; border-radius: 40px; background: var(--navy); box-shadow: 0 12px 30px rgba(16,43,59,.25); transform-origin: top center; }
+.smap-phone iframe { display: block; width: 390px; height: 844px; border: 0; border-radius: 30px; background: #fff; }
+.smap-qr-card { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 14px; align-items: center; padding: 12px; border: 1px solid var(--line); border-radius: 12px; }
+.smap-qr-card img { width: 132px; height: 132px; border-radius: 8px; background: #fff; }
+.smap-qr-card p { font-size: 14px; margin-bottom: 6px; }
+.smap-url { font-size: 12px !important; color: var(--muted); overflow-wrap: anywhere; }
+.smap-qr-big { position: fixed; inset: 0; z-index: 95; background: color-mix(in srgb, var(--navy) 92%, transparent); display: grid; place-items: center; padding: 24px 16px; }
+.smap-qr-big-card { background: #fff; color: #102b3b; border-radius: 20px; padding: 28px 28px 22px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; max-width: 100%; }
+.smap-qr-big-card img { width: min(62vh, 78vw); height: min(62vh, 78vw); }
+.smap-qr-big-card p { font-size: clamp(16px, 2.2vw, 24px); font-weight: 700; }
+.smap-qr-big-card p.mono { font-size: clamp(13px, 1.6vw, 18px); font-weight: 600; color: #5d6c7c; }
+.smap-qr-big-card .smap-small { background: #fff; color: #102b3b; border-color: #dfe6ec; }
 /* 넓은 화면에서는 패널 폭만큼 페이지를 밀어 화면이 가려지지 않게 한다 */
 @media (min-width: 1100px) {
   body.smap-open { padding-right: 400px; }

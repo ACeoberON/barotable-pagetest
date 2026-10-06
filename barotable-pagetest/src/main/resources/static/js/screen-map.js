@@ -4,10 +4,21 @@
  *  - 전체 흐름: 손님 / 점주 / 관리자 화면이 어떻게 이어지는지, 지금 화면 강조, 누르면 이동
  *  - 이 화면 구성: 영역별 번호와 설명, 실제 화면 위에 같은 번호 표시
  *  - 화면 사이 데이터 연결: 한 화면에서 바꾼 것이 어디에 반영되는지
- * 열림 상태와 번호 표시 여부는 sessionStorage('bt.smap')에 남아 화면을 옮겨도 유지된다.
+ *  - 휴대폰 탭: 지금 화면을 390 x 844 휴대폰 틀 안에 같이 띄우고, 미리보기 주소 QR(크게 보기)을 보여 준다
+ * 열림 상태 · 탭 · 번호 표시 여부는 sessionStorage('bt.smap')에 남아 화면을 옮겨도 유지된다.
  * common.js가 모든 화면에서 이 파일을 불러온다. 실제 서비스 화면에는 넣지 않는다.
  * ========================================================= */
 (function () {
+  /* 휴대폰 틀 안에 띄운 화면에서는 패널을 만들지 않는다 (틀 안에 패널이 또 열리는 것 방지) */
+  if (window.self !== window.top) {
+    /* 휴대폰 틀 안에서는 실제 휴대폰처럼 스크롤바를 숨긴다 */
+    const st = document.createElement('style');
+    st.textContent = 'html{scrollbar-width:none}html::-webkit-scrollbar{display:none}';
+    document.head.appendChild(st);
+    return;
+  }
+  const PREVIEW_URL = 'https://aceoberon.github.io/barotable-pagetest/';
+  const PHONE = { w: 390, h: 844 };
   const FB = {
     1: '피드백 1 · 규칙 파서 → 로컬 LLM',
     2: '피드백 2 · 테이블은 규칙 엔진',
@@ -100,7 +111,8 @@
   const KEY = 'bt.smap';
   const load = () => { try { return JSON.parse(sessionStorage.getItem(KEY)) || {}; } catch (e) { return {}; } };
   const save = v => { try { sessionStorage.setItem(KEY, JSON.stringify(v)); } catch (e) {} };
-  const S = Object.assign({ open: false, marks: true }, load());
+  const S = Object.assign({ open: false, marks: true, tab: 'map' }, load());
+  const STATIC = document.body.dataset.server === 'true' ? '/' : '../'.repeat(Number(document.body.dataset.depth || 0) + 1) + 'static/';
   const esc = BT.esc;
 
   /* ---------- 패널 ---------- */
@@ -115,7 +127,26 @@
       <div><span class="smap-eyebrow">화면 구성도</span><h2>${spec ? `<span class="mono">${spec.code}</span> ${esc(spec.name)}` : '바로테이블'}</h2></div>
       <button type="button" class="smap-x" aria-label="화면 구성도 닫기">×</button>
     </div>
-    <div class="smap-body">
+    <div class="smap-tabs" role="tablist" aria-label="패널 보기">
+      <button type="button" role="tab" data-tab="map">화면 구성</button>
+      <button type="button" role="tab" data-tab="phone">휴대폰 · QR</button>
+    </div>
+    <div class="smap-body" data-pane="phone" hidden>
+      <section>
+        <h3>휴대폰 화면 <span class="smap-who">${PHONE.w} × ${PHONE.h}</span></h3>
+        <div class="smap-phone-wrap"><div class="smap-phone"><iframe title="휴대폰 화면 미리보기" tabindex="0"></iframe></div></div>
+        <div class="smap-row"><button type="button" class="smap-small" data-act="reload">지금 화면 다시 불러오기</button><span class="smap-who">틀 안에서 눌러 보며 시연할 수 있어요</span></div>
+      </section>
+      <section>
+        <h3>휴대폰으로 직접 열기</h3>
+        <div class="smap-qr-card">
+          <img src="${STATIC}img/preview-qr.svg" alt="미리보기 주소 QR 코드" width="132" height="132">
+          <div><p>휴대폰 카메라로 찍으면 미리보기가 열려요.</p><p class="mono smap-url">${PREVIEW_URL.replace('https://', '')}</p>
+          <button type="button" class="smap-small" data-act="qr-big">QR 크게 보기</button></div>
+        </div>
+      </section>
+    </div>
+    <div class="smap-body" data-pane="map">
       ${spec ? `<section>
         <h3>이 화면 구성 <span class="smap-who">${esc(spec.who)} 화면</span></h3>
         <p class="smap-purpose">${esc(spec.purpose)}</p>
@@ -135,6 +166,44 @@
     </div>`;
   document.body.appendChild(panel);
 
+  /* ---------- 탭 · 휴대폰 화면 · QR ---------- */
+  const frame = panel.querySelector('.smap-phone iframe'), phone = panel.querySelector('.smap-phone'), wrap = panel.querySelector('.smap-phone-wrap');
+  function fitPhone() {
+    if (panel.hidden || S.tab !== 'phone') return;
+    const avW = wrap.clientWidth, avH = Math.max(320, innerHeight - wrap.getBoundingClientRect().top - 24);
+    const k = Math.min(1, avW / (PHONE.w + 20), avH / (PHONE.h + 20));
+    phone.style.transform = `translateX(-50%) scale(${k})`;
+    wrap.style.height = Math.round((PHONE.h + 20) * k) + 'px';
+  }
+  function loadPhone(force) {
+    const src = location.pathname + location.search;
+    if (force || !frame.getAttribute('src')) frame.src = src;
+  }
+  function setTab(t) {
+    S.tab = t; save(S);
+    panel.querySelectorAll('[data-tab]').forEach(b => { const on = b.dataset.tab === t; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+    panel.querySelectorAll('[data-pane]').forEach(p => { p.hidden = p.dataset.pane !== t; });
+    if (t === 'phone') { loadPhone(false); fitPhone(); }
+    place();
+  }
+  panel.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
+  panel.querySelector('[data-act="reload"]').addEventListener('click', () => loadPhone(true));
+  addEventListener('resize', fitPhone);
+
+  /* 뒤쪽 자리에서도 찍을 수 있게 QR을 화면 가운데에 크게 */
+  const big = document.createElement('div');
+  big.className = 'smap-qr-big'; big.hidden = true;
+  big.setAttribute('role', 'dialog'); big.setAttribute('aria-modal', 'true'); big.setAttribute('aria-label', '미리보기 QR 크게 보기');
+  big.innerHTML = `<div class="smap-qr-big-card"><img src="${STATIC}img/preview-qr.svg" alt="미리보기 주소 QR 코드">
+    <p>휴대폰 카메라로 찍어 직접 예약해 보세요</p><p class="mono">${PREVIEW_URL.replace('https://', '')}</p>
+    <button type="button" class="smap-small" data-act="qr-close">닫기 (Esc)</button></div>`;
+  document.body.appendChild(big);
+  const closeBig = () => { big.hidden = true; panel.querySelector('[data-act="qr-big"]').focus(); };
+  panel.querySelector('[data-act="qr-big"]').addEventListener('click', () => { big.hidden = false; big.querySelector('[data-act="qr-close"]').focus(); });
+  big.querySelector('[data-act="qr-close"]').addEventListener('click', closeBig);
+  big.addEventListener('click', e => { if (e.target === big) closeBig(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !big.hidden) closeBig(); });
+
   /* ---------- 화면 위 번호 표시 ---------- */
   const layer = document.createElement('div');
   layer.className = 'smap-layer'; layer.setAttribute('aria-hidden', 'true');
@@ -146,7 +215,7 @@
   let raf = 0;
   function place() {
     raf = 0;
-    if (!spec || panel.hidden || !S.marks) { layer.hidden = true; return; }
+    if (!spec || panel.hidden || !S.marks || S.tab !== 'map') { layer.hidden = true; return; }
     layer.hidden = false;
     spec.regions.forEach(([sel], i) => {
       const el = document.querySelector(sel), m = marks[i];
@@ -171,6 +240,7 @@
     panel.hidden = !v; document.body.classList.toggle('smap-open', v);
     if (btn) { btn.setAttribute('aria-pressed', v); btn.classList.toggle('on', v); }
     place(); setTimeout(place, 60);
+    if (v && S.tab === 'phone') { loadPhone(false); setTimeout(fitPhone, 60); }
   }
   const bar = document.querySelector('.proto-bar');
   let btn = null;
@@ -205,5 +275,6 @@
     li.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
   });
 
+  setTab(S.tab === 'phone' ? 'phone' : 'map');
   setOpen(!!S.open);
 })();
