@@ -62,7 +62,10 @@
       <!-- 좌석도 -->
       <section class="card" aria-label="좌석도">
         <div class="card-head">
-          <div class="tabs" id="floor-tabs" role="tablist" aria-label="층 선택"></div>
+          <div class="row" style="gap:8px">
+            <div class="tabs" id="floor-tabs" role="tablist" aria-label="층 선택"></div>
+            <button class="btn btn-ghost btn-sm" type="button" id="sf-open" aria-haspopup="dialog">좌석도 크게 보기</button>
+          </div>
           <div class="legend">
             <span><i></i>가능</span><span><i class="l-sel"></i>선택</span><span><i class="l-rec"></i>추천</span><span><i class="l-no"></i>예약됨</span>
           </div>
