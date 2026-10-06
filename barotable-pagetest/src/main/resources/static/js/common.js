@@ -176,7 +176,7 @@ window.BT = (function () {
     if (/[?&]debug\b/.test(location.search)) showDebug();
     /* 발표용 화면 구성도 패널 (static/js/screen-map.js) */
     const sm = document.createElement('script');
-    sm.src = document.body.dataset.server === 'true' ? '/js/screen-map.js?v=20261006c' : '../'.repeat(Number(document.body.dataset.depth || 0) + 1) + 'static/js/screen-map.js?v=20261006c';
+    sm.src = document.body.dataset.server === 'true' ? '/js/screen-map.js?v=20261006d' : '../'.repeat(Number(document.body.dataset.depth || 0) + 1) + 'static/js/screen-map.js?v=20261006d';
     document.body.appendChild(sm);
     /* 매장 입장 화면의 영업시간 표시도 운영 조건을 따른다 */
     const ho = document.getElementById('h-open'), hb = document.getElementById('h-break'), h = store().hours;
