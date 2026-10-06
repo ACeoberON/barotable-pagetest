@@ -10,6 +10,10 @@
   const pop = $('#chat-pop'), fab = $('#ai-fab'), body = $('#chat-body'), input = $('#chat-text');
   if (!pop || !fab) return;
   const st = BT.store();
+  /* 운영 조건의 AI 설정: 사용 안 함이면 채팅 버튼을 숨기고, 2단계 해석기 이름을 설정에 맞춘다 */
+  if (st.ai === 'off') { fab.hidden = true; return; }
+  const LLM = st.ai === 'external' || st.ai === 'openai' ? '외부 API' : '로컬 LLM';
+  const LLM_BY = LLM === '외부 API' ? '외부 API가' : '로컬 LLM이';
   const slot = { date: null, time: null, party: null, requests: [], prefs: [] };
   let misses = 0, greeted = false;
 
@@ -175,7 +179,7 @@
     if (!got && !r.phone) {
       misses++;
       if (misses >= 2) { fallback(); return; }
-      bot((via === 'llm' ? '규칙 파서와 로컬 LLM 모두 예약 정보를 찾지 못했어요.' : '죄송해요, 예약 정보를 찾지 못했어요.') + '\n"10월 10일 저녁 7시 4명"처럼 날짜·시간·인원을 알려 주세요.');
+      bot((via === 'llm' ? `규칙 파서와 ${LLM} 모두 예약 정보를 찾지 못했어요.` : '죄송해요, 예약 정보를 찾지 못했어요.') + '\n"10월 10일 저녁 7시 4명"처럼 날짜·시간·인원을 알려 주세요.');
       return;
     }
     misses = 0;
@@ -198,7 +202,7 @@
     const cell = (label, val) => `<div class="extract-cell ${val == null ? 'missing' : ''}"><span>${label}</span><b>${val == null ? '확인 필요' : BT.esc(val)}</b></div>`;
     el.innerHTML = `
       <div class="row" style="justify-content:space-between"><b style="font-size:13.5px">${done ? '예약 정보를 정리했어요' : '지금까지 정리한 내용'}</b><span class="badge badge-indigo">정해진 항목만 추출</span></div>
-      <div class="row"><span class="badge ${via === 'llm' ? 'badge-amber' : 'badge-teal'}" title="${via === 'llm' ? '규칙으로 읽지 못한 항목을 로컬 LLM에 맡겼어요' : '규칙 파서만으로 읽었어요'}">${via === 'llm' ? '로컬 LLM이 해석' : '규칙 파서로 해석'}</span></div>
+      <div class="row"><span class="badge ${via === 'llm' ? 'badge-amber' : 'badge-teal'}" title="${via === 'llm' ? '규칙으로 읽지 못한 항목을 ' + LLM + '에 맡겼어요' : '규칙 파서만으로 읽었어요'}">${via === 'llm' ? LLM_BY + ' 해석' : '규칙 파서로 해석'}</span></div>
       <div class="extract-grid">
         ${cell('날짜', slot.date ? BT.fmtDate(slot.date) : null)}
         ${cell('시간', slot.time)}
