@@ -12,7 +12,15 @@ window.BT = (function () {
   function sget(key, fallback) { try { const v = sessionStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; } }
   function sset(key, val) { try { sessionStorage.setItem(key, JSON.stringify(val)); } catch (e) {} }
 
-  const store = () => D.STORE;
+  /* 운영 조건(O-04)에서 저장한 값('bt.store')이 있으면 하드코딩 값 위에 덮어쓴다.
+   * 실제 구현: PUT /api/owner/settings -> GET /api/stores/{slug} */
+  function store() {
+    const o = sget('bt.store', null);
+    if (!o) return D.STORE;
+    return Object.assign({}, D.STORE, o, { hours: Object.assign({}, D.STORE.hours, o.hours), notify: Object.assign({}, D.STORE.notify, o.notify) });
+  }
+  const saveStore = o => sset('bt.store', o);
+  const resetStore = () => { try { sessionStorage.removeItem('bt.store'); } catch (e) {} };
   /* 좌석도 편집기(editor.js)에서 저장한 배치('bt.floors')가 있으면 그것을, 없으면 하드코딩 배치를 쓴다.
    * 실제 구현: PUT /api/owner/layout -> GET /api/stores/{slug}/layout */
   const floors = () => JSON.parse(JSON.stringify(sget('bt.floors', null) || D.FLOORS));
@@ -102,7 +110,7 @@ window.BT = (function () {
     }
     return out;
   }
-  /* 11:30 ~ 22:00, 30분 단위, 브레이크 15:00~17:00 선택 불가 (마지막 예약 21:30) */
+  /* 오픈 ~ 마감 30분 전까지 30분 단위, 브레이크는 선택 불가 (기본 11:30–21:30, 브레이크 15:00–17:00) */
   function slots() {
     const h = store().hours, out = [];
     for (let m = toMin(h.open); m < toMin(h.close); m += 30) {
@@ -139,6 +147,10 @@ window.BT = (function () {
     bar.innerHTML = `<span class="proto-tag">PAGE TEST</span><span class="proto-note">화면 설계 확인용 · 하드코딩 데이터</span>
       <label class="proto-jump"><span class="sr-only">화면 이동</span><select id="proto-jump">${SCREENS.map(s => `<option value="${s[0]}" ${s[0] === cur ? 'selected' : ''}>${s[1]}  ${s[2]}</option>`).join('')}</select></label>`;
     document.body.prepend(bar);
+    /* 매장 입장 화면의 영업시간 표시도 운영 조건을 따른다 */
+    const ho = document.getElementById('h-open'), hb = document.getElementById('h-break'), h = store().hours;
+    if (ho) ho.textContent = `${h.open} – ${h.close}`;
+    if (hb) hb.textContent = h.breakStart === h.breakEnd ? '없음' : `${h.breakStart} – ${h.breakEnd}`;
     bar.querySelector('#proto-jump').addEventListener('change', e => go(e.target.value));
     document.querySelectorAll('[data-go]').forEach(a => {
       if (a.tagName === 'A') a.setAttribute('href', url(a.dataset.go));
@@ -146,6 +158,6 @@ window.BT = (function () {
     });
   });
 
-  return { YEAR, MONTH, TODAY, NOW, store, floors, allTables, findTable, zoneOf, url, go, draft, saveDraft,
+  return { YEAR, MONTH, TODAY, NOW, store, saveStore, resetStore, floors, allTables, findTable, zoneOf, url, go, draft, saveDraft,
     guestNo, reservations, updateReservation, addReservation, removeReservation, resetReservations, isActive, seatRule, tableClash, sget, sset, pad, toMin, toHHMM, parseDate, iso, fmtDate, octoberDays, slots, timeCheck, esc, toast };
 })();

@@ -32,7 +32,7 @@
               <div class="field"><label for="s-bs">브레이크 시작</label><input class="input" type="time" id="s-bs" value="15:00" step="1800"></div>
               <div class="field"><label for="s-be">브레이크 끝</label><input class="input" type="time" id="s-be" value="17:00" step="1800"></div>
             </div>
-            <p class="notice">손님 화면 예약 시간: 11:30 ~ 21:30 · 브레이크 15:00–17:00 제외</p>
+            <p class="notice" id="s-preview" aria-live="polite">손님 화면 예약 시간: 11:30 ~ 21:30 · 브레이크 15:00–17:00 제외</p>
           </section>
 
           <section class="card stack" aria-labelledby="s2">
@@ -66,11 +66,22 @@
             </div>
           </section>
         </div>
+
+        <section class="card" style="margin-top:16px" aria-label="저장">
+          <div class="row ed-savebar" style="margin-top:0;padding-top:0;border-top:0">
+            <span class="hint" id="save-state" aria-live="polite">저장된 설정</span>
+            <span class="grow"></span>
+            <button class="btn btn-ghost btn-sm" type="button" id="s-reset">기본값으로</button>
+            <button class="btn btn-primary btn-sm" type="button" id="s-save">운영 조건 저장</button>
+          </div>
+          <ul class="result-list" id="s-result" style="margin-top:10px" hidden></ul>
+        </section>
       </div>
     </main>
   </div>
   <script src="../../static/js/data.js" th:src="@{/js/data.js}"></script>
   <script src="../../static/js/common.js" th:src="@{/js/common.js}"></script>
   <script src="../../static/js/owner-common.js" th:src="@{/js/owner-common.js}"></script>
+  <script src="../../static/js/pages/settings.js" th:src="@{/js/pages/settings.js}"></script>
 </body>
 </html>
