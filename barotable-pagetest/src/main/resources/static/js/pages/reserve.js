@@ -235,12 +235,23 @@
     const on = (k, fn) => { const b = box.querySelector(`[data-sf="${k}"]`); if (b) b.addEventListener('click', fn); };
     on('next', () => goNext(t)); on('next-rec', () => goNext(rec)); on('pick', pickRec);
   }
+  /* 화면 전체를 덮는 핵심 스타일은 CSS와 별개로 직접 넣는다.
+   * 휴대폰 브라우저가 예전 CSS를 들고 있거나 inset · dvh 같은 문법을 몰라도 화면을 덮게 하기 위함 */
+  const COVER = { position: 'fixed', top: '0', right: '0', bottom: '0', left: '0', zIndex: '65', background: 'var(--bg, #f5f7fa)' };
+  let openedAt = 0;
   function openFull(push) {
-    FULL.open = true; FULL.zoom = 1; full.hidden = false;
-    document.documentElement.classList.add('sf-lock');
-    if (push !== false) history.pushState({ seatFull: 1 }, '');
-    renderFloors(); renderMap(); renderSheet();
-    full.querySelector('[data-sf="close"]').focus();
+    try {
+      FULL.open = true; FULL.zoom = 1; full.hidden = false;
+      Object.assign(full.style, COVER);
+      document.documentElement.classList.add('sf-lock');
+      openedAt = Date.now();
+      if (push !== false && history.pushState) { try { history.pushState({ seatFull: 1 }, ''); } catch (e) { /* 기록을 못 남겨도 닫기 버튼으로 닫을 수 있다 */ } }
+      renderFloors(); renderMap(); renderSheet();
+      full.querySelector('[data-sf="close"]').focus({ preventScroll: true });
+    } catch (e) {
+      BT.toast('좌석도 크게 보기를 열지 못했어요: ' + (e && e.message ? e.message : e));
+      throw e;
+    }
   }
   function closeFull() {
     if (!FULL.open) return;
@@ -250,7 +261,12 @@
     const b = $('#sf-open'); if (b) b.focus();
   }
   /* 휴대폰 뒤로가기로 닫힌다 */
-  addEventListener('popstate', () => { if (FULL.open) closeFull(); });
+  addEventListener('popstate', () => {
+    if (!FULL.open) return;
+    if (history.state && history.state.seatFull) return;      // 아직 크게 보기 기록 위에 있음
+    if (Date.now() - openedAt < 400) return;                  // 열자마자 들어온 신호는 무시
+    closeFull();
+  });
   const back = () => { if (history.state && history.state.seatFull) history.back(); else closeFull(); };
   full.querySelector('[data-sf="close"]').addEventListener('click', back);
   full.querySelector('[data-sf="in"]').addEventListener('click', () => { FULL.zoom = Math.min(3, FULL.zoom + 0.5); fitFull(); });

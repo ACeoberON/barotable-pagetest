@@ -134,6 +134,32 @@ window.BT = (function () {
     setTimeout(() => el.classList.add('out'), 2400); setTimeout(() => el.remove(), 2800);
   }
 
+  /* ---------- 진단 표시 (?debug) ----------
+   * 실제 휴대폰에서만 생기는 문제를 보기 위한 것. 브라우저 정보, 불러온 CSS · JS 주소, 오류를 화면에 띄운다 */
+  const ERRS = [];
+  addEventListener('error', e => { ERRS.push((e.message || 'error') + (e.filename ? ' @ ' + e.filename.split('/').pop() + ':' + e.lineno : '')); paintDebug(); });
+  addEventListener('unhandledrejection', e => { ERRS.push('promise: ' + (e.reason && e.reason.message || e.reason)); paintDebug(); });
+  let dbg = null;
+  function showDebug() {
+    dbg = document.createElement('pre');
+    dbg.style.cssText = 'position:fixed;left:8px;right:8px;top:calc(8px + env(safe-area-inset-top, 0px));z-index:99;max-height:32vh;pointer-events:none;opacity:.92;overflow:auto;margin:0;padding:10px;font:11px/1.4 monospace;white-space:pre-wrap;word-break:break-all;background:rgba(16,43,59,.94);color:#e6eef2;border-radius:10px';
+    document.body.appendChild(dbg); paintDebug();
+    setInterval(paintDebug, 1500);
+  }
+  function paintDebug() {
+    if (!dbg) return;
+    const files = [...document.querySelectorAll('link[rel=stylesheet],script[src]')].map(el => (el.href || el.src).split('/').pop()).filter(x => /\.(css|js)/.test(x));
+    const full = document.querySelector('.seat-full');
+    dbg.textContent = [
+      'UA: ' + navigator.userAgent,
+      'viewport: ' + innerWidth + 'x' + innerHeight + ' · dpr ' + devicePixelRatio,
+      'files: ' + files.join(', '),
+      'supports inset/dvh: ' + CSS.supports('inset', '0') + ' / ' + CSS.supports('height', '100dvh'),
+      full ? 'seat-full: hidden=' + full.hidden + ' position=' + getComputedStyle(full).position + ' top=' + Math.round(full.getBoundingClientRect().top) : 'seat-full: (없음)',
+      'errors: ' + (ERRS.length ? '\n - ' + ERRS.join('\n - ') : '없음')
+    ].join('\n');
+  }
+
   /* ---------- 화면 목록 바 ---------- */
   const SCREENS = [
     ['index', 'C-01', '매장 입장'], ['reserve', 'C-03', '좌석도 선택 · AI 채팅'], ['confirm', 'C-04/05', '정보·확인'],
@@ -147,9 +173,10 @@ window.BT = (function () {
     bar.innerHTML = `<span class="proto-tag">PAGE TEST</span><span class="proto-note">화면 설계 확인용 · 하드코딩 데이터</span>
       <label class="proto-jump"><span class="sr-only">화면 이동</span><select id="proto-jump">${SCREENS.map(s => `<option value="${s[0]}" ${s[0] === cur ? 'selected' : ''}>${s[1]}  ${s[2]}</option>`).join('')}</select></label>`;
     document.body.prepend(bar);
+    if (/[?&]debug\b/.test(location.search)) showDebug();
     /* 발표용 화면 구성도 패널 (static/js/screen-map.js) */
     const sm = document.createElement('script');
-    sm.src = document.body.dataset.server === 'true' ? '/js/screen-map.js?v=20261006b' : '../'.repeat(Number(document.body.dataset.depth || 0) + 1) + 'static/js/screen-map.js?v=20261006b';
+    sm.src = document.body.dataset.server === 'true' ? '/js/screen-map.js?v=20261006c' : '../'.repeat(Number(document.body.dataset.depth || 0) + 1) + 'static/js/screen-map.js?v=20261006c';
     document.body.appendChild(sm);
     /* 매장 입장 화면의 영업시간 표시도 운영 조건을 따른다 */
     const ho = document.getElementById('h-open'), hb = document.getElementById('h-break'), h = store().hours;
