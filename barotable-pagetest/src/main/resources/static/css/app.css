@@ -275,6 +275,20 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .map-table strong { font-family: var(--mono); font-size: 13px; }
 .map-table span { color: var(--muted); font-size: 11.5px; }
 .map-table small { font-size: 10px; color: var(--muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+/* 좌석도 폭에 맞춘 글자 크기: 좁은 좌석도에서는 테이블 번호만, 구역·시설 이름은 작게 한 줄로 */
+.map-canvas { container-type: inline-size; }
+.map-fixture span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; padding: 0 2px; }
+@container (max-width: 560px) {
+  .map-table { padding: 0; border-width: 1.5px; }
+  .map-table span, .map-table small { display: none; }
+  .map-table strong { font-size: clamp(8px, 2.6cqw, 12px); letter-spacing: -.02em; }
+  .zone-label { font-size: clamp(8px, 2cqw, 11px); top: -.75em; left: 6px; padding: 0 5px; }
+  .zone-label em { display: none; }
+  .map-fixture { font-size: clamp(7px, 1.9cqw, 11px); border-radius: 5px; }
+  .fx-window span { font-size: clamp(7px, 1.7cqw, 10px); right: 4px; }
+  .map-table.is-recommended::before { font-size: clamp(7px, 1.8cqw, 9px); padding: 0 4px; top: -.9em; right: -4px; }
+  .map-canvas .map-table.is-selected { box-shadow: 0 0 0 2px var(--mint); }
+}
 .map-table.shape-round { border-radius: 50%; }
 .map-table.shape-bar { border-radius: 26px; }
 .map-table.shape-room { border-radius: 14px; border-width: 2.5px; }
@@ -538,13 +552,19 @@ html.sf-lock, html.sf-lock body { overflow: hidden; }
 .sf-why { font-size: 13px; color: var(--muted); }
 /* 가로로 돌린 휴대폰: 높이가 낮으니 선택 정보를 오른쪽으로, 위쪽 막대는 얇게 */
 @media (orientation: landscape) and (max-height: 520px) {
-  .seat-full { display: grid; grid-template-columns: minmax(0, 1fr) 260px; grid-template-rows: auto auto minmax(0, 1fr); }
+  .seat-full { display: grid; grid-template-columns: minmax(0, 1fr) 270px; grid-template-rows: auto auto minmax(0, 1fr); }
   .sf-top { grid-column: 1 / -1; padding-top: calc(6px + env(safe-area-inset-top, 0px)); padding-bottom: 6px; }
   .sf-x, .sf-zoom button { height: 34px; }
-  .sf-filters { grid-column: 1; flex-direction: row; align-items: center; padding: 6px 10px; overflow-x: auto; scrollbar-width: none; }
-  .sf-filters .tabs { flex: none; flex-wrap: nowrap; }
-  .sf-area { grid-column: 1; grid-row: 3; }
-  .sf-sheet { grid-column: 2; grid-row: 2 / 4; border-top: 0; border-left: 1px solid var(--line); box-shadow: none; justify-content: flex-end; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+  .sf-title span { font-size: 12px; }
+  .sf-filters { grid-column: 2; grid-row: 2; padding: 10px 12px 6px; border-bottom: 0; border-left: 1px solid var(--line); gap: 6px; }
+  .sf-filters .tabs { align-self: flex-start; }
+  .sf-filters .zone-filter { flex-wrap: wrap; overflow: visible; }
+  .sf-filters .zone-filter .chip { min-height: 28px; font-size: 12px; padding: 0 10px; }
+  .sf-area { grid-column: 1; grid-row: 2 / 4; padding: 6px; }
+  .sf-sheet { grid-column: 2; grid-row: 3; border-top: 0; border-left: 1px solid var(--line); box-shadow: none; justify-content: flex-start; overflow-y: auto; min-height: 0; padding-top: 4px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+  .sf-sheet .btn { min-height: 44px; margin-top: auto; flex: none; }
+  .sf-why { font-size: 12px; }
+  .sf-hint { display: none !important; }
 }
 /* 하단 바는 휴대폰 폭에서만 */
 .seat-bar { display: none; }
