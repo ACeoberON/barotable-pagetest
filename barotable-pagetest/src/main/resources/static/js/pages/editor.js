@@ -23,7 +23,7 @@
   const FX_NAME = { window: '창문', wall: '벽', entrance: '입구', kitchen: '주방', restroom: '화장실', stairs: '계단' };
   const SHAPES = [['round', '원형'], ['rect', '사각'], ['bar', '바'], ['room', '룸']];
   /* 예약이 걸린 테이블은 지우거나 번호를 바꿀 수 없다 (예약이 가리키는 자리가 사라지므로) */
-  const BOOKED = new Set(BT_DATA.OWNER_RESERVATIONS.filter(r => r.status === 'booked').map(r => r.table).concat(BT_DATA.CUSTOMER_RESERVED));
+  const BOOKED = new Set(BT.reservations().filter(r => r.status === 'booked').map(r => r.table));
 
   const floor = () => FL.find(f => f.id === S.floor);
   const snap = v => Math.round(v / GRID) * GRID;

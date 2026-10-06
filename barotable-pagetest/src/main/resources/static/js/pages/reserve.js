@@ -1,6 +1,8 @@
 /* C-03 좌석도 선택
  * 구현: 10월 날짜 선택, 11:30–22:00(브레이크 제외) 시간 선택, 층 탭 · 구역 필터, AI 채팅 조건 적용
- * 막힌 자리: 고른 날짜·시간과 이용 시간(dineMinutes)이 겹치는 예약이 있는 테이블
+ * 막힌 자리: 고른 날짜·시간과 이용 시간(dineMinutes)이 겹치는 예약이 있는 테이블.
+ *   예약 목록은 BT.reservations()라서 점주의 전화 예약 · 테이블 이동 · 손님 취소가 그대로 반영된다.
+ * 오늘은 기준 시각(BT.NOW) 이후 시간만 고를 수 있다.
  * 추천: AI가 아니라 아래 규칙 엔진이 고른다. 최종 선택은 손님.
  */
 (function () {
@@ -9,23 +11,27 @@
   const d0 = BT.draft();
   const days = BT.octoberDays();
   const DINE = BT.store().dineMinutes;
-  /* 매장 예약 (하드코딩). 날짜가 없는 항목은 점주 화면 기준일(10/5) 예약 */
-  const BOOKINGS = BT_DATA.OWNER_RESERVATIONS.map(r => Object.assign({ date: BT_DATA.OWNER_TODAY }, r))
-    .filter(r => r.status !== 'cancelled' && r.status !== 'noshow');
+  /* 매장 전체 예약. 지금 고르고 있는 내 예약(임시 저장분)은 내 자리를 막지 않도록 뺀다 */
+  const bookings = () => { const mine = BT.guestNo(BT.draft()); return BT.reservations().filter(r => r.no !== mine); };
+  const isPast = time => S.date === BT.TODAY && BT.toMin(time) <= BT.toMin(BT.NOW);
 
   /* ---------- 규칙 엔진 ----------
    * 1) 이미 예약(같은 날, 이용 시간 겹침) · 좌석 부족 · 구역 인원 조건 위반을 뺀다.
    * 2) 남은 후보 중 채팅 요청(창가 · 바 등)과 맞는 테이블을 먼저, 그 안에서 좌석 수가 가장 작은 테이블.
-   * 점주 화면의 BT.tableClash와 같은 겹침 기준이다. */
-  const clash = t => BOOKINGS.find(r => r.table === t.id && r.date === S.date && Math.abs(BT.toMin(r.time) - BT.toMin(S.time)) < DINE) || null;
+   * 점주 화면과 같은 공통 규칙(BT.tableClash, BT.seatRule)을 쓴다. */
+  const clash = t => BT.tableClash(t.id, S.date, S.time, bookings());
   function violation(t, party) {
+    if (isPast(S.time)) return `${BT.NOW} 이전 시간은 예약할 수 없어요`;
     const c = clash(t);
     if (c) return `${c.time}에 예약이 있어 ${BT.toHHMM(BT.toMin(c.time) + DINE)}까지 쓸 수 없어요`;
-    if (t.seats < party) return `${t.seats}인 테이블이라 ${party}명은 앉을 수 없어요`;
-    const z = BT.zoneOf(t, fl);
-    if (z && z.minParty && party < z.minParty) return `${z.name}은 ${z.minParty}명 이상만 예약돼요`;
-    if (z && z.maxParty && party > z.maxParty) return `${z.name}은 ${z.maxParty}명까지만 예약돼요`;
-    return null;
+    return BT.seatRule(t, party, fl);
+  }
+  /* 오늘을 골랐는데 시간이 이미 지났으면 다음 예약 가능 시간으로 옮긴다 */
+  function fixTime() {
+    if (!isPast(S.time)) return false;
+    const next = BT.slots().find(x => !x.break && !isPast(x.time));
+    if (next) { S.time = next.time; return true; }
+    return false;
   }
   /* 채팅 요청(ai-chat.js의 prefs)과 테이블이 몇 개나 맞는지 */
   function prefScore(t) {
@@ -49,7 +55,7 @@
         data-date="${x.iso}" ${x.past ? 'disabled' : ''} aria-selected="${x.iso === S.date}" aria-label="10월 ${x.day}일 ${x.week}요일">
         <span class="w">${x.today ? '오늘' : x.week}</span><span class="d">${x.day}</span>
       </button>`).join('');
-    box.querySelectorAll('.date-chip:not([disabled])').forEach(b => b.addEventListener('click', () => { S.date = b.dataset.date; renderDates(); renderMap(); renderPanel(); }));
+    box.querySelectorAll('.date-chip:not([disabled])').forEach(b => b.addEventListener('click', () => { S.date = b.dataset.date; if (fixTime()) BT.toast(`오늘은 ${BT.NOW} 이후만 예약돼요. ${S.time}로 바꿨어요`); renderDates(); renderTimes(); renderMap(); renderPanel(); }));
     const on = box.querySelector('.on');
     if (on) box.scrollLeft = Math.max(0, on.offsetLeft - box.offsetLeft - 60);
   }
@@ -57,7 +63,7 @@
   function renderTimes() {
     const sl = BT.slots(), h = BT.store().hours;
     const g = p => sl.filter(x => x.period === p);
-    const chip = x => `<button type="button" class="chip ${x.time === S.time ? 'on' : ''}" data-time="${x.time}" ${x.break ? 'disabled title="브레이크 타임"' : ''} aria-pressed="${x.time === S.time}">${x.time}</button>`;
+    const chip = x => `<button type="button" class="chip ${x.time === S.time ? 'on' : ''}" data-time="${x.time}" ${x.break ? 'disabled title="브레이크 타임"' : isPast(x.time) ? 'disabled title="지난 시간"' : ''} aria-pressed="${x.time === S.time}">${x.time}</button>`;
     const lunch = g('lunch'), brk = g('break'), dinner = g('dinner');
     $('#time-groups').innerHTML = `
       <div class="time-group"><div class="time-group-label"><b>점심</b>${lunch[0].time}–${lunch[lunch.length - 1].time}</div><div class="chips">${lunch.map(chip).join('')}</div></div>
@@ -139,9 +145,11 @@
   window.ReservePage = {
     apply(patch) {
       Object.assign(S, { date: patch.date, time: patch.time, party: patch.party, request: patch.request || '', prefs: patch.prefs || [], selected: null });
+      fixTime();
       renderDates(); renderTimes(); renderParty(); renderMap(); renderPanel();
     }
   };
 
+  fixTime();
   renderDates(); renderTimes(); renderParty(); renderFloors(); renderMap(); renderPanel();
 })();
