@@ -113,5 +113,23 @@ window.BT_DATA = (function () {
   /* (손님 좌석도는 이제 날짜·시간별로 계산하므로 이 목록을 쓰지 않는다. 좌석도 편집기의 삭제 잠금에서만 참고) */
   const CUSTOMER_RESERVED = ['T05', 'T06', 'T10', 'T22', 'R02'];
 
-  return { STORE, FLOORS, OWNER_TODAY, OWNER_NOW, OWNER_RESERVATIONS, NOSHOW_HISTORY, CUSTOMER_RESERVED };
+  /* 서비스 관리자 화면 (v2 프로토타입에서 옮김)
+   *   GET /api/admin/owners?status=pending, POST /api/admin/owners/{id}/approve */
+  const ADMIN = {
+    stores: { total: 12, open: 11, check: 1 },
+    todayReservations: 84,
+    pending: [
+      { id: 'OW-0103', store: '성수 파스타랩', owner: '김점주', email: 'owner01@example.com', area: '서울 성동구', category: '이탈리안', tables: 14, appliedAt: '2026-10-03', bizNo: '123-45-*****' },
+      { id: 'OW-0104', store: '테이블 비스트로', owner: '이대표', email: 'owner02@example.com', area: '서울 마포구', category: '비스트로', tables: 9, appliedAt: '2026-10-04', bizNo: '234-56-*****' },
+      { id: 'OW-0105', store: '연남 한상', owner: '박사장', email: 'owner03@example.com', area: '서울 마포구', category: '한식', tables: 18, appliedAt: '2026-10-05', bizNo: '345-67-*****' }
+    ],
+    services: [['웹 예약', 'ok'], ['좌석도 서비스', 'ok'], ['AI 예약 도우미 (규칙 파서 + 로컬 LLM)', 'ok'], ['점검 대상 매장', '1곳']],
+    activity: [
+      { time: '16:42', title: '점주 계정 승인', desc: '바로키친 성수점 계정 활성화' },
+      { time: '14:10', title: 'AI 상태 확인', desc: '로컬 LLM 응답 정상' },
+      { time: '11:25', title: '서비스 점검', desc: '예약 및 좌석도 서비스 정상' }
+    ]
+  };
+
+  return { STORE, FLOORS, OWNER_TODAY, OWNER_NOW, OWNER_RESERVATIONS, NOSHOW_HISTORY, CUSTOMER_RESERVED, ADMIN };
 })();

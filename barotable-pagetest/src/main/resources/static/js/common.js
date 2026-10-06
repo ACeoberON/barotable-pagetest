@@ -27,7 +27,7 @@ window.BT = (function () {
   /* ---------- 화면 이동 ---------- */
   const ROUTES = {
     'index': ['index.html', '/'], 'reserve': ['reserve.html', '/reserve'], 'confirm': ['confirm.html', '/reserve/confirm'],
-    'complete': ['complete.html', '/reserve/complete'], 'lookup': ['lookup.html', '/reservations/lookup'],
+    'complete': ['complete.html', '/reserve/complete'], 'lookup': ['lookup.html', '/reservations/lookup'], 'admin': ['admin/dashboard.html', '/admin'],
     'owner-login': ['owner/login.html', '/owner/login'], 'owner-dashboard': ['owner/dashboard.html', '/owner/dashboard'],
     'owner-editor': ['owner/editor.html', '/owner/seat-map'], 'owner-settings': ['owner/settings.html', '/owner/settings'],
     'owner-guests': ['owner/guests.html', '/owner/guests']
@@ -132,6 +132,7 @@ window.BT = (function () {
     ['complete', 'C-06', '예약 완료'], ['lookup', 'C-07', '비회원 조회'], ['owner-login', 'A-01', '점주·관리자 로그인'],
     ['owner-dashboard', 'O-02', '점주 대시보드'], ['owner-guests', 'O-05', '손님 배정'], ['owner-editor', 'O-03', '좌석도 편집'], ['owner-settings', 'O-04', '운영 조건']
   ];
+  SCREENS.push(['admin', 'A-02', '서비스 관리자']);
   document.addEventListener('DOMContentLoaded', () => {
     const cur = document.body.dataset.screen;
     const bar = document.createElement('div'); bar.className = 'proto-bar';
