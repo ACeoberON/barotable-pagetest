@@ -1,5 +1,5 @@
 /* O-02 점주 대시보드 (기준 시각 BT.NOW = 19:00 하드코딩)
- * 동작: 층 탭, 상태 필터, 예약 선택(목록 · 좌석도), 방문 완료, 노쇼 처리/되돌리기, 테이블 옮기기, 워크인 배정
+ * 동작: 층 탭, 상태 필터, 예약 선택(목록 · 좌석도 · 시간표), 방문 완료, 노쇼 처리/되돌리기, 테이블 옮기기, 워크인 배정
  * 바뀐 내용은 BT.updateReservation / BT.addReservation 으로 sessionStorage에 저장된다.
  * 자리 판단은 규칙으로만 한다: 좌석 수 · 구역 인원 조건(BT.seatRule) + 이용 시간 겹침(BT.tableClash)
  */
@@ -69,6 +69,21 @@
       tr.addEventListener('click', pick);
       tr.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
     });
+
+    /* 시간표 */
+    const focus = sel ? sel.table : String(S.sel || '').replace('table:', '') || null;
+    Timetable.render($('#timetable'), {
+      tables: BT.allTables(fl), reservations: RES, date: TODAY, focus, soon: true,
+      onPick: (r, tableId) => {
+        const t = BT.findTable(tableId, fl);
+        if (t) S.floor = t.floor;
+        if (r) S.sel = r.no;
+        else { const x = resForTable(tableId, RES); S.sel = x ? x.no : 'table:' + tableId; }
+        render();
+      }
+    });
+    const ss = Timetable.soonSummary(RES, TODAY);
+    $('#soon-status').textContent = ss.text; $('#soon-status').classList.toggle('on', ss.soon);
 
     renderDetail(sel, RES);
     renderWalkin(RES);
