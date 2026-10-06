@@ -166,6 +166,8 @@
     if (r.phone) bot('연락처나 이메일은 채팅에 저장하지 않아요. 다음 단계 입력칸에서 따로 받을게요.', 'warn');
     let got = false;
     ['date', 'time', 'party'].forEach(k => { if (r[k] != null) { slot[k] = r[k]; got = true; } });
+    // 오늘은 기준 시각(BT.NOW) 이후만 받는다
+    if (slot.date === BT.TODAY && slot.time && BT.toMin(slot.time) <= BT.toMin(BT.NOW)) { bot(`오늘은 ${BT.NOW} 이후로만 예약할 수 있어요. 다른 시간을 알려 주세요.`, 'warn'); slot.time = null; got = true; }
     r.requests.forEach(x => { if (!slot.requests.includes(x)) { slot.requests.push(x); got = true; } });
     r.prefs.forEach(x => { if (!slot.prefs.includes(x)) slot.prefs.push(x); });
     r.problems.forEach(p => { bot(p.msg, 'warn'); got = true; });
@@ -182,7 +184,8 @@
     if (missing.length) {
       const k = missing[0];
       if (k === 'date') bot('언제 방문하실까요? 10월 중 날짜로 알려 주세요.');
-      if (k === 'time') bot(r.timeHint === 'lunch' ? `점심은 ${st.hours.open}–${prevSlot(st.hours.breakStart)} 사이에 예약돼요. 몇 시쯤 오실까요?`
+      if (k === 'time' && slot.date === BT.TODAY) bot(`오늘은 ${BT.toHHMM(BT.toMin(BT.NOW) + (st.slotMinutes || 30))}–${prevSlot(st.hours.close)} 사이에 예약돼요. 몇 시쯤 오실까요?`);
+      else if (k === 'time') bot(r.timeHint === 'lunch' ? `점심은 ${st.hours.open}–${prevSlot(st.hours.breakStart)} 사이에 예약돼요. 몇 시쯤 오실까요?`
         : r.timeHint === 'dinner' ? `저녁은 ${st.hours.breakEnd}–${prevSlot(st.hours.close)} 사이에 예약돼요. 몇 시쯤 오실까요?`
         : `몇 시쯤 오실까요? 점심 ${st.hours.open}–${prevSlot(st.hours.breakStart)}, 저녁 ${st.hours.breakEnd}–${prevSlot(st.hours.close)} 사이로 골라 주세요.`);
       if (k === 'party') bot('몇 분이 오시나요?');

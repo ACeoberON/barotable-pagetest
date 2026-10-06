@@ -110,9 +110,6 @@ window.BT_DATA = (function () {
   const NOSHOW_HISTORY = { '010-5555-1212': 2, '010-9090-1010': 1 };
 
 
-  /* (손님 좌석도는 이제 날짜·시간별로 계산하므로 이 목록을 쓰지 않는다. 좌석도 편집기의 삭제 잠금에서만 참고) */
-  const CUSTOMER_RESERVED = ['T05', 'T06', 'T10', 'T22', 'R02'];
-
   /* 서비스 관리자 화면 (v2 프로토타입에서 옮김)
    *   GET /api/admin/owners?status=pending, POST /api/admin/owners/{id}/approve */
   const ADMIN = {
@@ -131,5 +128,5 @@ window.BT_DATA = (function () {
     ]
   };
 
-  return { STORE, FLOORS, OWNER_TODAY, OWNER_NOW, OWNER_RESERVATIONS, NOSHOW_HISTORY, CUSTOMER_RESERVED, ADMIN };
+  return { STORE, FLOORS, OWNER_TODAY, OWNER_NOW, OWNER_RESERVATIONS, NOSHOW_HISTORY, ADMIN };
 })();
