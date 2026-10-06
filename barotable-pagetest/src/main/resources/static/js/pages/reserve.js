@@ -1,6 +1,7 @@
 /* C-03 좌석도 선택
  * 구현: 10월 날짜 선택, 영업시간 안 30분 단위 시간 선택(브레이크 제외), 층 탭 · 구역 필터, AI 채팅 조건 적용
  * 운영 조건(BT.store())의 영업시간 · 인원 범위 · 이용 시간 · 자리 직접 고르기 허용 여부를 따른다.
+ * 휴대폰: 좌석도 크게 보기(전체 화면, 뒤로가기로 닫힘)와 화면 아래 고정 바로 스크롤을 줄인다.
  * 막힌 자리: 고른 날짜·시간과 이용 시간(dineMinutes)이 겹치는 예약이 있는 테이블.
  *   예약 목록은 BT.reservations()라서 점주의 전화 예약 · 테이블 이동 · 손님 취소가 그대로 반영된다.
  * 오늘은 기준 시각(BT.NOW) 이후 시간만 고를 수 있다.
@@ -95,11 +96,16 @@
     $('#zone-filter').innerHTML = `<button type="button" class="chip ${S.zone === 'all' ? 'on' : ''}" data-zone="all">${BT.esc(f.name)} 전체</button>` +
       f.zones.map(z => `<button type="button" class="chip ${S.zone === z.id ? 'on' : ''}" data-zone="${z.id}"><span class="zone-swatch sw-${z.color}"></span>${BT.esc(z.name)}</button>`).join('');
     document.querySelectorAll('#zone-filter .chip').forEach(b => b.addEventListener('click', () => { S.zone = b.dataset.zone; renderFloors(); renderMap(); }));
+    if (FULL.open) {
+      $('#sf-floors').innerHTML = $('#floor-tabs').innerHTML;
+      $('#sf-zones').innerHTML = $('#zone-filter').innerHTML;
+      $('#sf-floors').querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => { S.floor = b.dataset.floor; S.zone = 'all'; renderFloors(); renderMap(); }));
+      $('#sf-zones').querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => { S.zone = b.dataset.zone; renderFloors(); renderMap(); }));
+    }
   }
   /* ---------- 좌석도 ---------- */
-  function renderMap() {
-    const f = fl.find(x => x.id === S.floor);
-    SeatMap.render($('#map'), f, {
+  function mapOpts() {
+    return {
       selected: S.selected,
       recommended: S.selected ? null : ((recommend(S.party) || {}).t || {}).id,
       zoneFilter: S.zone,
@@ -110,10 +116,39 @@
         S.selected = S.selected === t.id ? null : t.id;
         renderMap(); renderPanel();
       }
-    });
+    };
   }
+  function renderMap() {
+    const f = fl.find(x => x.id === S.floor);
+    SeatMap.render($('#map'), f, mapOpts());
+    if (FULL.open) { SeatMap.render($('#sf-map'), f, mapOpts()); fitFull(); }
+  }
+  /* ---------- 다음 단계로 (패널 · 크게 보기 · 하단 바 공통) ---------- */
+  function goNext(t) {
+    // 저장 직전 재검사: 화면 상태와 상관없이 코드로 한 번 더 확인
+    if (!t || violation(t, S.party)) { renderMap(); renderPanel(); return; }
+    BT.saveDraft({ date: S.date, time: S.time, party: S.party, table: t.id, request: S.request });
+    BT.go('confirm');
+  }
+  function recInfo() {
+    const r = recommend(S.party), rec = r && r.t, want = S.prefs.join(' · ');
+    const why = !want ? `${S.party}명이 앉을 수 있는 빈 테이블 중 가장 작은 자리예요`
+      : r && r.matched ? `요청하신 ${BT.esc(want)} 자리 중 가장 작은 자리예요`
+      : `요청하신 ${BT.esc(want)} 자리는 비어 있지 않아요. 대신 ${S.party}명이 앉을 수 있는 가장 작은 자리를 추천해요`;
+    return { rec, why };
+  }
+  /* 추천 자리를 선택 상태로 (그 층으로 이동) */
+  function pickRec() {
+    const { rec } = recInfo();
+    if (!rec) return;
+    S.selected = rec.id; S.floor = rec.floor; S.zone = 'all';
+    renderFloors(); renderMap(); renderPanel();
+  }
+  const where = t => `${t.seats}인 · ${BT.esc(t.floorName)} ${BT.esc((BT.zoneOf(t, fl) || {}).name || '')}`;
+
   /* ---------- 선택 패널 ---------- */
-  function renderPanel() {
+  function renderPanel() { renderSide(); renderBar(); renderSheet(); }
+  function renderSide() {
     const p = $('#sel-panel');
     const t = S.selected ? BT.findTable(S.selected, fl) : null;
     const cond = `${BT.fmtDate(S.date, 'short')} · ${S.time} · ${S.party}명`;
@@ -129,12 +164,7 @@
         </dl>
         ${bad ? `<div class="notice bad">${BT.esc(bad)}</div>` : ''}
         <button class="btn btn-primary btn-block" id="go-next" ${bad ? 'disabled' : ''}>이 테이블 선택</button>`;
-      $('#go-next').addEventListener('click', () => {
-        // 저장 직전 재검사: 화면 상태와 상관없이 코드로 한 번 더 확인
-        if (violation(t, S.party)) { renderPanel(); return; }
-        BT.saveDraft({ date: S.date, time: S.time, party: S.party, table: t.id, request: S.request });
-        BT.go('confirm');
-      });
+      $('#go-next').addEventListener('click', () => goNext(t));
     } else {
       const r = recommend(S.party), rec = r && r.t;
       const want = S.prefs.join(' · ');
@@ -148,11 +178,7 @@
           ${rec ? `<p class="notice">${BT.esc(rec.floorName)} ${BT.esc((BT.zoneOf(rec, fl) || {}).name || '')} · ${why}</p><button class="btn btn-primary btn-block" id="go-auto">이 자리로 예약</button>`
             : `<div class="notice bad">${S.party}명이 앉을 수 있는 빈 테이블이 없어요. 시간이나 인원을 바꿔 주세요.</div>`}`;
         const ga = $('#go-auto');
-        if (ga) ga.addEventListener('click', () => {
-          if (violation(rec, S.party)) { renderMap(); renderPanel(); return; } // 저장 직전 재검사
-          BT.saveDraft({ date: S.date, time: S.time, party: S.party, table: rec.id, request: S.request });
-          BT.go('confirm');
-        });
+        if (ga) ga.addEventListener('click', () => goNext(rec));
         return;
       }
       p.innerHTML = `<span class="badge badge-gray" style="align-self:flex-start">현재 선택 없음</span>
@@ -160,6 +186,102 @@
         ${rec ? `<div class="notice warn"><b>추천 ${rec.id}</b> · ${rec.seats}인 · ${BT.esc(rec.floorName)} ${BT.esc((BT.zoneOf(rec, fl) || {}).name || '')}<br><span style="font-size:12px">${why}</span></div>`
           : `<div class="notice bad">${S.party}명이 앉을 수 있는 빈 테이블이 없어요. 인원을 바꾸거나 매장에 문의해 주세요.</div>`}`;
     }
+  }
+
+  /* ---------- 좌석도 크게 보기 (휴대폰 전체 화면) ---------- */
+  const FULL = { open: false, zoom: 1 };
+  const full = document.createElement('div');
+  full.className = 'seat-full'; full.hidden = true;
+  full.setAttribute('role', 'dialog'); full.setAttribute('aria-modal', 'true'); full.setAttribute('aria-label', '좌석도 크게 보기');
+  full.innerHTML = `
+    <div class="sf-top">
+      <button type="button" class="sf-x" data-sf="close" aria-label="크게 보기 닫기">←</button>
+      <div class="sf-title"><b>좌석도</b><span id="sf-cond"></span></div>
+      <div class="sf-zoom" role="group" aria-label="확대/축소">
+        <button type="button" data-sf="out" aria-label="축소">−</button><button type="button" data-sf="fit">맞춤</button><button type="button" data-sf="in" aria-label="확대">+</button>
+      </div>
+    </div>
+    <div class="sf-filters"><div class="tabs" id="sf-floors" role="tablist" aria-label="층 선택"></div><div class="zone-filter" id="sf-zones" aria-label="구역 필터"></div></div>
+    <div class="sf-area" id="sf-area"><div id="sf-map"></div><p class="sf-hint">휴대폰을 가로로 돌리면 더 크게 보여요 · + 로 확대</p></div>
+    <div class="sf-sheet" id="sf-sheet" aria-live="polite"></div>`;
+  document.body.appendChild(full);
+  /* 맞춤 = 좌석도 전체가 한 화면에 들어오는 크기. 확대하면 손가락으로 밀어서 본다 */
+  function fitFull() {
+    const area = $('#sf-area'), cv = $('#sf-map .map-canvas');
+    if (!cv) return;
+    const base = Math.min(area.clientWidth - 16, (area.clientHeight - 16) * 1000 / 600);
+    const w = Math.max(240, Math.round(base * FULL.zoom));
+    cv.style.width = w + 'px'; cv.style.minWidth = '0';
+    full.querySelector('[data-sf="out"]').disabled = FULL.zoom <= 1;
+    full.querySelector('[data-sf="in"]').disabled = FULL.zoom >= 3;
+  }
+  function renderSheet() {
+    if (!FULL.open) return;
+    $('#sf-cond').textContent = `${BT.fmtDate(S.date, 'short')} · ${S.time} · ${S.party}명`;
+    const box = $('#sf-sheet'), t = S.selected ? BT.findTable(S.selected, fl) : null, { rec, why } = recInfo();
+    if (!st.allowSeatChoice) {
+      box.innerHTML = rec ? `<div class="sf-info"><span class="badge badge-indigo">자동 배정</span><b>${rec.id}</b><span>${where(rec)}</span></div><button type="button" class="btn btn-primary" data-sf="next-rec">이 자리로 예약</button>`
+        : '<p class="notice bad">배정할 자리가 없어요. 시간이나 인원을 바꿔 주세요.</p>';
+    } else if (t) {
+      const bad = violation(t, S.party);
+      box.innerHTML = `<div class="sf-info"><span class="badge badge-solid">선택</span><b>${t.id}</b><span>${where(t)}</span></div>
+        ${bad ? `<p class="notice bad">${BT.esc(bad)}</p>` : ''}
+        <button type="button" class="btn btn-primary" data-sf="next" ${bad ? 'disabled' : ''}>이 테이블 선택</button>`;
+    } else {
+      box.innerHTML = rec ? `<div class="sf-info"><span class="badge badge-amber">추천</span><b>${rec.id}</b><span>${where(rec)}</span></div><p class="sf-why">${why}</p>
+        <button type="button" class="btn btn-soft" data-sf="pick">추천 자리 고르기</button>`
+        : `<p class="notice bad">${S.party}명이 앉을 수 있는 빈 테이블이 없어요.</p>`;
+    }
+    const on = (k, fn) => { const b = box.querySelector(`[data-sf="${k}"]`); if (b) b.addEventListener('click', fn); };
+    on('next', () => goNext(t)); on('next-rec', () => goNext(rec)); on('pick', pickRec);
+  }
+  function openFull(push) {
+    FULL.open = true; FULL.zoom = 1; full.hidden = false;
+    document.documentElement.classList.add('sf-lock');
+    if (push !== false) history.pushState({ seatFull: 1 }, '');
+    renderFloors(); renderMap(); renderSheet();
+    full.querySelector('[data-sf="close"]').focus();
+  }
+  function closeFull() {
+    if (!FULL.open) return;
+    FULL.open = false; full.hidden = true;
+    document.documentElement.classList.remove('sf-lock');
+    renderFloors(); renderMap(); renderPanel();
+    const b = $('#sf-open'); if (b) b.focus();
+  }
+  /* 휴대폰 뒤로가기로 닫힌다 */
+  addEventListener('popstate', () => { if (FULL.open) closeFull(); });
+  const back = () => { if (history.state && history.state.seatFull) history.back(); else closeFull(); };
+  full.querySelector('[data-sf="close"]').addEventListener('click', back);
+  full.querySelector('[data-sf="in"]').addEventListener('click', () => { FULL.zoom = Math.min(3, FULL.zoom + 0.5); fitFull(); });
+  full.querySelector('[data-sf="out"]').addEventListener('click', () => { FULL.zoom = Math.max(1, FULL.zoom - 0.5); fitFull(); });
+  full.querySelector('[data-sf="fit"]').addEventListener('click', () => { FULL.zoom = 1; fitFull(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && FULL.open) back(); });
+  addEventListener('resize', () => { if (FULL.open) fitFull(); });
+  const so = $('#sf-open'); if (so) so.addEventListener('click', () => openFull());
+
+  /* ---------- 휴대폰 하단 고정 바 ---------- */
+  const bar = document.createElement('div');
+  bar.className = 'seat-bar'; bar.setAttribute('aria-live', 'polite');
+  document.body.appendChild(bar);
+  document.body.classList.add('has-seat-bar');
+  function renderBar() {
+    const t = S.selected ? BT.findTable(S.selected, fl) : null, { rec } = recInfo();
+    let info = '', act = '';
+    if (!st.allowSeatChoice) {
+      info = rec ? `<span class="badge badge-indigo">자동 배정</span><b>${rec.id}</b><small>${where(rec)}</small>` : '<small>배정할 자리가 없어요</small>';
+      act = rec ? '<button type="button" class="btn btn-primary btn-sm" data-sb="next-rec">이 자리로 예약</button>' : '';
+    } else if (t) {
+      const bad = violation(t, S.party);
+      info = `<span class="badge badge-solid">선택</span><b>${t.id}</b><small>${bad ? BT.esc(bad) : where(t)}</small>`;
+      act = `<button type="button" class="btn btn-primary btn-sm" data-sb="next" ${bad ? 'disabled' : ''}>다음</button>`;
+    } else if (rec) {
+      info = `<span class="badge badge-amber">추천</span><b>${rec.id}</b><small>${where(rec)}</small>`;
+      act = '<button type="button" class="btn btn-soft btn-sm" data-sb="pick">추천 고르기</button>';
+    } else info = '<small>앉을 수 있는 빈 테이블이 없어요</small>';
+    bar.innerHTML = `<div class="sb-info">${info}</div><button type="button" class="btn btn-ghost btn-sm" data-sb="full">좌석도 크게</button>${act}`;
+    const on = (k, fn) => { const b = bar.querySelector(`[data-sb="${k}"]`); if (b) b.addEventListener('click', fn); };
+    on('full', () => openFull()); on('next', () => goNext(t)); on('next-rec', () => goNext(rec)); on('pick', pickRec);
   }
 
   /* AI 채팅에서 확인한 조건 적용 */

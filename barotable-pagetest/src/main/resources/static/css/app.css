@@ -511,6 +511,52 @@ table.list tr.dimmed td { color: var(--faint); }
 .tt-legend .l-brk { background: repeating-linear-gradient(-45deg, var(--line) 0 3px, transparent 3px 6px); border-color: var(--line); }
 .soon-status { font-size: 12.5px; font-weight: 700; padding: 5px 10px; border-radius: 99px; background: var(--surface-2); color: var(--muted); }
 .soon-status.on { background: var(--amber-soft); color: var(--amber-ink); }
+/* ---------- 좌석도 크게 보기 · 휴대폰 하단 바 (reserve.js) ---------- */
+html.sf-lock, html.sf-lock body { overflow: hidden; }
+.seat-full { position: fixed; inset: 0; z-index: 65; background: var(--bg); display: flex; flex-direction: column; height: 100dvh; }
+.sf-top { display: flex; align-items: center; gap: 10px; padding: calc(10px + env(safe-area-inset-top, 0px)) 12px 10px; background: var(--navy); color: var(--on-navy); }
+.sf-x { flex: none; width: 40px; height: 40px; border: 0; border-radius: 10px; background: var(--navy-2); color: var(--on-navy); font-size: 20px; cursor: pointer; }
+.sf-title { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+.sf-title b { font-size: 16px; }
+.sf-title span { font-size: 12.5px; color: var(--on-navy-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sf-zoom { display: flex; gap: 4px; flex: none; }
+.sf-zoom button { min-width: 40px; height: 40px; border: 0; border-radius: 10px; background: var(--navy-2); color: var(--on-navy); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; padding: 0 8px; }
+.sf-zoom button[disabled] { opacity: .35; cursor: default; }
+.sf-filters { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; background: var(--surface); border-bottom: 1px solid var(--line); }
+.sf-filters .zone-filter { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.sf-filters .zone-filter .chip { flex: none; }
+.sf-area { flex: 1; min-height: 0; overflow: auto; padding: 8px; display: grid; place-items: center; -webkit-overflow-scrolling: touch; }
+.sf-area .map-canvas { min-width: 0; }
+.sf-hint { display: none; font-size: 12.5px; color: var(--faint); text-align: center; }
+@media (orientation: portrait) and (max-width: 760px) { .sf-hint { display: block; } }
+.sf-sheet { padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -8px 24px rgba(16,43,59,.08); display: flex; flex-direction: column; gap: 8px; }
+.sf-sheet .btn { width: 100%; min-height: 48px; }
+.sf-info { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sf-info b { font-family: var(--mono); font-size: 18px; }
+.sf-info span:not(.badge) { color: var(--muted); font-size: 14px; }
+.sf-why { font-size: 13px; color: var(--muted); }
+/* 가로로 돌린 휴대폰: 높이가 낮으니 선택 정보를 오른쪽으로, 위쪽 막대는 얇게 */
+@media (orientation: landscape) and (max-height: 520px) {
+  .seat-full { display: grid; grid-template-columns: minmax(0, 1fr) 260px; grid-template-rows: auto auto minmax(0, 1fr); }
+  .sf-top { grid-column: 1 / -1; padding-top: calc(6px + env(safe-area-inset-top, 0px)); padding-bottom: 6px; }
+  .sf-x, .sf-zoom button { height: 34px; }
+  .sf-filters { grid-column: 1; flex-direction: row; align-items: center; padding: 6px 10px; overflow-x: auto; scrollbar-width: none; }
+  .sf-filters .tabs { flex: none; flex-wrap: nowrap; }
+  .sf-area { grid-column: 1; grid-row: 3; }
+  .sf-sheet { grid-column: 2; grid-row: 2 / 4; border-top: 0; border-left: 1px solid var(--line); box-shadow: none; justify-content: flex-end; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+}
+/* 하단 바는 휴대폰 폭에서만 */
+.seat-bar { display: none; }
+@media (max-width: 760px) {
+  .seat-bar { display: flex; align-items: center; gap: 8px; position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -8px 24px rgba(16,43,59,.10); }
+  .seat-bar .sb-info { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; line-height: 1.2; }
+  .seat-bar .sb-info b { font-family: var(--mono); font-size: 16px; }
+  .seat-bar .sb-info small { width: 100%; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .seat-bar .btn { flex: none; min-height: 40px; }
+  body.has-seat-bar { padding-bottom: 76px; }
+  body.has-seat-bar .fab { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+}
+@media (max-width: 520px) { body.has-seat-bar .chat-pop { bottom: calc(150px + env(safe-area-inset-bottom, 0px)); height: calc(100dvh - 220px); } }
 /* ---------- 화면 구성도 패널 (발표용, screen-map.js) ---------- */
 .smap-btn.on { background: var(--teal); border-color: var(--teal); color: #fff; }
 .smap { position: fixed; top: 0; right: 0; bottom: 0; width: min(400px, 100vw); z-index: 70; background: var(--surface); border-left: 1px solid var(--line); box-shadow: -12px 0 32px rgba(16,43,59,.14); display: flex; flex-direction: column; font-size: 15px; }
